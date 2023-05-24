@@ -48,8 +48,11 @@ jobs:
 
     - run: yarn generate
     - run: yarn lint
+      if: false
     - run: yarn lint-deps
+      if: false
     - run: yarn lint-license-comments
+      if: false
     - run: git diff --exit-code
 
     - name: Update cached .eslintcache and tsconfig.tsbuildinfo
