@@ -450,6 +450,15 @@ export function Preferences({
                   onChange={onMinimizeToAndStartInSystemTrayChange}
                 />
               )}
+              {true && (
+                <Checkbox
+                  checked={false}
+                  label={i18n('icu:changeFormat24h')}
+                  moduleClassName="Preferences__checkbox"
+                  name="hideMenuBar"
+                  onChange={onHideMenuBarChange}
+                />
+              )}
             </>
           )}
         </SettingsRow>

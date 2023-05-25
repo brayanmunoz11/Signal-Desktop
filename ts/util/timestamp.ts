@@ -129,6 +129,7 @@ export function formatDateTimeLong(
       time: new Intl.DateTimeFormat(locale, {
         hour: 'numeric',
         minute: 'numeric',
+        hour12: false,
       }).format(timestamp),
     });
   }
@@ -138,6 +139,7 @@ export function formatDateTimeLong(
       time: new Intl.DateTimeFormat(locale, {
         hour: 'numeric',
         minute: 'numeric',
+        hour12: false,
       }).format(timestamp),
     });
   }
