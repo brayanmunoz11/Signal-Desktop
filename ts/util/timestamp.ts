@@ -1,10 +1,22 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
+// import winston from 'winston';
 
 import type { Moment } from 'moment';
 import moment from 'moment';
 import type { LocalizerType } from '../types/Util';
 import { DAY, HOUR, MINUTE, MONTH, WEEK } from './durations';
+// import { LoggerType } from '../types/Logging';
+
+// const logger = winston.createLogger({
+//   level: 'info',
+//   format: winston.format.json(),
+//   defaultMeta: { service: 'user-service' },
+//   transports: [
+//     new winston.transports.Console(),
+//     new winston.transports.File({ filename: 'logger.log' }),
+//   ],
+// });
 
 type RawTimestamp = Readonly<number | Date | Moment>;
 
@@ -122,13 +134,17 @@ export function formatDateTimeLong(
   rawTimestamp: RawTimestamp
 ): string {
   const locale = window.getPreferredSystemLocales();
+  // locale: [ 'en-US', 'es-MX', 'fr-FR' ]
+  // rawTimestamp: 1684902144126
   const timestamp = rawTimestamp.valueOf();
+  // timestamp: 1684902144126
 
   if (isToday(rawTimestamp)) {
     return i18n('icu:timestampFormat__long--today', {
       time: new Intl.DateTimeFormat(locale, {
         hour: 'numeric',
         minute: 'numeric',
+        hour12: false,
       }).format(timestamp),
     });
   }
@@ -138,6 +154,7 @@ export function formatDateTimeLong(
       time: new Intl.DateTimeFormat(locale, {
         hour: 'numeric',
         minute: 'numeric',
+        hour12: false,
       }).format(timestamp),
     });
   }

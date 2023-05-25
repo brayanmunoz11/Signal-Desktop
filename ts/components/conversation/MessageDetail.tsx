@@ -316,6 +316,8 @@ export function MessageDetail({
     ? DurationInSeconds.fromMillis(message.expirationTimestamp - Date.now())
     : undefined;
 
+  // const locale = window.getPreferredSystemLocales();
+
   return (
     // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
     <div className="module-message-detail" tabIndex={0} ref={focusRef}>
@@ -370,6 +372,7 @@ export function MessageDetail({
         <tbody>
           {(errors || []).map(error => (
             <tr key={_keyForError(error)}>
+              {/* Enviado */}
               <td className="module-message-detail__label">
                 {i18n('icu:error')}
               </td>
@@ -382,6 +385,7 @@ export function MessageDetail({
           <tr>
             <td className="module-message-detail__label">{i18n('icu:sent')}</td>
             <td>
+              {/* Enviado */}
               <ContextMenu
                 i18n={i18n}
                 menuOptions={[
@@ -395,12 +399,17 @@ export function MessageDetail({
                 ]}
               >
                 <>
+                  {/* Enviado */}
+                  {/* epoch to human-readable https://www.epochconverter.com/ */}
                   <Time timestamp={sentAt}>
                     {formatDateTimeLong(i18n, sentAt)}
+                    {/* {sentAt.valueOf()} */}
                   </Time>{' '}
+                  {/* Hora */}
                   <span className="module-message-detail__unix-timestamp">
                     ({sentAt})
                   </span>
+                  {/* <span>{locale.toString()}</span> */}
                 </>
               </ContextMenu>
             </td>

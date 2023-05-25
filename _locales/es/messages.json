@@ -4007,6 +4007,10 @@
     "messageformat": "Ocultar barra de menú",
     "description": "Label text for menu bar visibility setting"
   },
+  "icu:changeFormat24h": {
+    "messageformat": "Cambiar a formato 24h en sistemas basados en UNIX",
+    "description": "Label text for 24h format setting"
+  },
   "startConversation": {
     "message": "Comienza un chat con…",
     "description": "(deleted 03/29/2023) Label underneath number a user enters that is not an existing contact"

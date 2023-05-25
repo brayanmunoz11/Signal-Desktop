@@ -296,6 +296,12 @@ module.exports = {
     ...rules,
     'import/no-unresolved': 'off',
     'import/extensions': 'off',
+    'prettier/prettier': [
+      'error',
+      {
+        endOfLine: 'auto',
+      },
+    ],
   },
 
   reportUnusedDisableDirectives: true,
