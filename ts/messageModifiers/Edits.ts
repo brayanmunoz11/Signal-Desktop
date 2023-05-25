@@ -3,16 +3,16 @@
 
 import type { MessageAttributesType } from '../model-types.d';
 import type { MessageModel } from '../models/messages';
-import type { ProcessedDataMessage } from '../textsecure/Types.d';
 import * as Errors from '../types/errors';
 import * as log from '../logging/log';
 import { drop } from '../util/drop';
 import { filter, size } from '../util/iterables';
 import { getContactId } from '../messages/helpers';
 import { handleEditMessage } from '../util/handleEditMessage';
+import { getMessageSentTimestamp } from '../util/getMessageSentTimestamp';
 
 export type EditAttributesType = {
-  dataMessage: ProcessedDataMessage;
+  conversationId: string;
   fromId: string;
   message: MessageAttributesType;
   targetSentTimestamp: number;
@@ -21,17 +21,23 @@ export type EditAttributesType = {
 const edits = new Set<EditAttributesType>();
 
 export function forMessage(message: MessageModel): Array<EditAttributesType> {
+  const sentAt = getMessageSentTimestamp(message.attributes, { log });
   const matchingEdits = filter(edits, item => {
     return (
-      item.targetSentTimestamp === message.get('sent_at') &&
+      item.targetSentTimestamp === sentAt &&
       item.fromId === getContactId(message.attributes)
     );
   });
 
   if (size(matchingEdits) > 0) {
-    log.info('Edits.forMessage: Found early edit for message');
+    const result = Array.from(matchingEdits);
+    const editsLogIds = result.map(x => x.message.sent_at);
+    log.info(
+      `Edits.forMessage(${message.get('sent_at')}): ` +
+        `Found early edits for message ${editsLogIds.join(', ')}`
+    );
     filter(matchingEdits, item => edits.delete(item));
-    return Array.from(matchingEdits);
+    return result;
   }
 
   return [];
@@ -64,7 +70,7 @@ export async function onEdit(edit: EditAttributesType): Promise<void> {
       targetConversation.queueJob('Edits.onEdit', async () => {
         log.info('Handling edit for', {
           targetSentTimestamp: edit.targetSentTimestamp,
-          sentAt: edit.dataMessage.timestamp,
+          sentAt: edit.message.timestamp,
         });
 
         const messages = await window.Signal.Data.getMessagesBySentAt(
@@ -74,7 +80,7 @@ export async function onEdit(edit: EditAttributesType): Promise<void> {
         // Verify authorship
         const targetMessage = messages.find(
           m =>
-            edit.message.conversationId === m.conversationId &&
+            edit.conversationId === m.conversationId &&
             edit.fromId === getContactId(m)
         );
 

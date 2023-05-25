@@ -641,7 +641,7 @@
     "description": "Shown as the title in the confirmation modal for removing a contact from the contact list"
   },
   "icu:ContactListItem__remove--body": {
-    "messageformat": "Bilaketak egitean, ez duzu pertsona hau ikusiko. Etorkizunean mezu bat bidaltzen badizute, mezu-eskaera bat jasoko duzu.",
+    "messageformat": "Bilaketak egitean, ez duzu pertsona hau ikusiko. Etorkizunean mezu bat bidaltzen badizu, mezu-eskaera bat jasoko duzu.",
     "description": "Shown as the body in the confirmation modal for removing a contact from the contact list"
   },
   "icu:ContactListItem__remove--confirm": {
@@ -653,7 +653,7 @@
     "description": "Shown as the title in the confirmation modal for removing a system contact from the contact list"
   },
   "icu:ContactListItem__remove-system--body": {
-    "messageformat": "Pertsona hau zure gailuko Kontaktuetan gordetzen da. Ezabatu zure gailu mugikorreko kontaktuetatik eta saiatu berriro.",
+    "messageformat": "Pertsona hau zure gailuko Kontaktuetan dago gordeta. Ezaba ezazu gailu mugikorreko kontaktuetatik eta saiatu berriro.",
     "description": "Shown as the body in the confirmation modal for removing a system contact from the contact list"
   },
   "moveConversationToInbox": {
@@ -1563,6 +1563,10 @@
     "message": "Eranskailuen paketeak sortzeko tresna",
     "description": "(deleted 03/15/2023) Title of the window that pops up with Signal Desktop preferences in it"
   },
+  "icu:signalDesktopStickerCreator": {
+    "messageformat": "Eranskailuen paketeak sortzeko tresna",
+    "description": "Title of the window that pops up with Signal Desktop preferences in it"
+  },
   "aboutSignalDesktop": {
     "message": "Signal Desktop-i buruz",
     "description": "(deleted 03/29/2023) Item under the Help menu, which opens a small about window"
@@ -2158,6 +2162,9 @@
   "icu:accept": {
     "messageformat": "Onartu"
   },
+  "icu:edit": {
+    "messageformat": "Editatu"
+  },
   "forward": {
     "message": "Birbidali",
     "description": "(deleted 03/29/2023)"
@@ -2346,6 +2353,10 @@
     "messageformat": "Informazio gehiago",
     "description": "Shown on the drop-down menu for an individual message, takes you to message detail screen"
   },
+  "icu:copy": {
+    "messageformat": "Testua kopiatu",
+    "description": "Shown on the drop-down menu for an individual message, copies the message text to the clipboard"
+  },
   "icu:MessageContextMenu__select": {
     "messageformat": "Aukeratu",
     "description": "Shown on the drop-down menu for an individual message, opens the conversation in select mode with the current message selected"
@@ -2394,9 +2405,29 @@
     "messageformat": "Ezabatu mezua guztientzat",
     "description": "(deleted 04/06/2023) Shown on the drop-down menu for an individual message, deletes single message for everyone"
   },
+  "icu:MessageContextMenu__reply": {
+    "messageformat": "Erantzun",
+    "description": "Shown on the drop-down menu for an individual message when there isnt room for a dedicated button, focuses the composer with a reply to the current message"
+  },
+  "icu:MessageContextMenu__react": {
+    "messageformat": "Erreakzionatu",
+    "description": "Shown on the drop-down menu for an individual message when there isnt room for a dedicated button, opens the react picker for the current message"
+  },
+  "icu:MessageContextMenu__download": {
+    "messageformat": "Deskargatu",
+    "description": "Shown on the drop-down menu for an individual message when there isnt room for a dedicated button and when there's only a single attachment, downloads an attachment"
+  },
   "icu:MessageContextMenu__deleteMessage": {
-    "messageformat": "Ezabatu mezua",
+    "messageformat": "Ezabatu",
     "description": "Show on the drop-down menu for an individual message, opens a modal to select if you want to 'delete for me' or 'delete for everyone'"
+  },
+  "icu:MessageContextMenu__forward": {
+    "messageformat": "Birbidali",
+    "description": "Show on the drop-down menu for an individual message, opens a modal to forward a message"
+  },
+  "icu:MessageContextMenu__info": {
+    "messageformat": "Info",
+    "description": "Shown on the drop-down menu for an individual message, takes you to message detail screen"
   },
   "deleteMessages": {
     "message": "Ezabatu",
@@ -3325,8 +3356,8 @@
     "messageformat": "Egiaztatu mezuak idazteko eremuko testuaren ortografia",
     "description": "Description of the spell check setting"
   },
-  "icu:textFormattingDescripton": {
-    "messageformat": "Enable text formatting popover when text is selected",
+  "icu:textFormattingDescription": {
+    "messageformat": "Erakutsi testu-formatuaren menu gainerakorra testua hautatzen denean",
     "description": "Description of the text-formatting popover menu setting"
   },
   "spellCheckWillBeEnabled": {
@@ -3534,6 +3565,10 @@
   "icu:deleteFailed": {
     "messageformat": "Ezin izan da ezabatu",
     "description": "Shown on a message which was deleted for everyone if the delete wasn't successfully sent to anyone"
+  },
+  "icu:editFailed": {
+    "messageformat": "Ezin izan da editatu. Egin klik xehetasunak ikusteko.",
+    "description": "Shown on a message which was edited if the edit wasn't successfully sent to anyone"
   },
   "sendPaused": {
     "message": "Bidalketa eten egin da",
@@ -4064,7 +4099,7 @@
     "description": "Label shown when there are no conversations to compose to"
   },
   "icu:Toast--ConversationRemoved": {
-    "messageformat": "{title} kendu da.",
+    "messageformat": "Kendu da {title}.",
     "description": "Shown after the contact was removed from the contact list"
   },
   "Toast--error": {
@@ -4098,6 +4133,10 @@
   "icu:Toast--failed-to-fetch-phone-number": {
     "messageformat": "Ezin izan da eskuratu telefono-zenbakia. Egiaztatu konektatuta zaudela eta saiatu berriro.",
     "description": "Shown if request to Signal servers to find phone number fails"
+  },
+  "icu:ToastManager__CannotEditMessage": {
+    "messageformat": "Mezu hau bidali eta 3 orduko epean soilik aplika daitezke aldaketak.",
+    "description": "Error message when you try to send an edit after message becomes too old"
   },
   "startConversation--username-not-found": {
     "message": "Ez da aurkitu erabiltzailea. $atUsername$ ez da Signal-eko erabiltzailea; ziurtatu erabiltzaile-izen osoa idatzi duzula.",
@@ -4669,7 +4708,7 @@
     "description": "Accessibility label for outgoing messages"
   },
   "icu:messageAccessibilityLabel--incoming": {
-    "messageformat": "{author}(ek) bidalitako mezua",
+    "messageformat": "{author} erabiltzaileak bidalitako mezua",
     "description": "Accessibility label for incoming messages"
   },
   "icu:modal--donation--title": {
@@ -4928,6 +4967,10 @@
     "message": "Bilatu Emojia",
     "description": "(deleted 03/29/2023) Shown as a placeholder inside the emoji picker search field."
   },
+  "icu:EmojiPicker--search-close": {
+    "messageformat": "Itxi emojien bilaketa",
+    "description": "Button title to cancel the emoji search."
+  },
   "icu:EmojiPicker--search-placeholder": {
     "messageformat": "Bilatu Emojia",
     "description": "Shown as a placeholder inside the emoji picker search field."
@@ -5019,6 +5062,10 @@
   "icu:confirmation-dialog--Cancel": {
     "messageformat": "Utzi",
     "description": "Appears on the cancel button in confirmation dialogs."
+  },
+  "icu:Message__role-description": {
+    "messageformat": "Mezua",
+    "description": "aria-roledescription of a message"
   },
   "MessageBody--read-more": {
     "message": "Irakurri gehiago",
@@ -5135,6 +5182,10 @@
   "icu:Conversation--getDraftPreview--draft": {
     "messageformat": "(zirriborroa)",
     "description": "Text shown in left pane as preview for conversation with saved a saved draft message"
+  },
+  "icu:Keyboard--focus-most-recent-message": {
+    "messageformat": "Jarri fokua irakurri gabeko mezu zaharrenean edo azken mezuan",
+    "description": "Shown in shortcuts guide"
   },
   "Keyboard--navigate-by-section": {
     "message": "Nabigatu atalaren arabera",
@@ -5473,24 +5524,44 @@
     "description": "Header of the keyboard shortcuts guide - composer section"
   },
   "icu:Keyboard--composer--bold": {
-    "messageformat": "Mark selected text as bold",
+    "messageformat": "Markatu hautatutako testua lodi gisa",
     "description": "Description of command to bold text in composer"
   },
   "icu:Keyboard--composer--italic": {
-    "messageformat": "Mark selected text as italic",
+    "messageformat": "Markatu hautatutako testua etzan gisa",
     "description": "Description of command to bold text in composer"
   },
   "icu:Keyboard--composer--strikethrough": {
-    "messageformat": "Mark selected text as strikethrough",
+    "messageformat": "Markatu hautatutako testua marratu gisa",
     "description": "Description of command to bold text in composer"
   },
   "icu:Keyboard--composer--monospace": {
-    "messageformat": "Mark selected text as monospace",
+    "messageformat": "Markatu hautatutako testua tarte bakarreko gisa",
     "description": "Description of command to bold text in composer"
   },
   "icu:Keyboard--composer--spoiler": {
-    "messageformat": "Mark selected text as a spoiler",
+    "messageformat": "Markatu hautatutako testua spoiler gisa",
     "description": "Description of command to bold text in composer"
+  },
+  "icu:FormatMenu--guide--bold": {
+    "messageformat": "Lodia",
+    "description": "Shown when you hover over the bold button in the popup formatting menu"
+  },
+  "icu:FormatMenu--guide--italic": {
+    "messageformat": "Etzana",
+    "description": "Shown when you hover over the bold button in the popup formatting menu"
+  },
+  "icu:FormatMenu--guide--strikethrough": {
+    "messageformat": "Marratua",
+    "description": "Shown when you hover over the bold button in the popup formatting menu"
+  },
+  "icu:FormatMenu--guide--monospace": {
+    "messageformat": "Tarte bakarrekoa",
+    "description": "Shown when you hover over the bold button in the popup formatting menu"
+  },
+  "icu:FormatMenu--guide--spoiler": {
+    "messageformat": "Spoilerra",
+    "description": "Shown when you hover over the bold button in the popup formatting menu"
   },
   "Keyboard--scroll-to-top": {
     "message": "Korritu zerrendaren goialdera",
@@ -5645,11 +5716,11 @@
     "description": "A toast that shows up when user marks a conversation as unread"
   },
   "icu:SendFormatting--dialog--title": {
-    "messageformat": "Sending formatted text",
+    "messageformat": "Testu formatuduna bidaltzen",
     "description": "Title of the modal shown before sending your first formatting message"
   },
   "icu:SendFormatting--dialog--body": {
-    "messageformat": "Some people may be using a version of Signal that doesn’t support formatted text. They will not be able to see the formatting changes you’ve made to your message.",
+    "messageformat": "Baliteke pertsona batzuek darabilten Signal-en bertsioak ez onartzea testu fomartuduna. Ezingo dituzte ikusi mezuan egin dituzun formatu-aldaketak.",
     "description": "Body text of the modal shown before sending your first formatting message"
   },
   "icu:AuthArtCreator--dialog--message": {
@@ -5909,7 +5980,7 @@
     "description": "Shown as the message for a message request in a direct message"
   },
   "icu:MessageRequests--message-direct-hidden": {
-    "messageformat": "{name} erabiltzaileari mezua bidaltzen utzi eta zure izena eta argazkia haiekin partekatu nahi dituzu? Pertsona hau iraganean kendu duzu.",
+    "messageformat": "Zuri mezuak bidaltzeko baimena eman nahi diozu {name} erabiltzaileari, eta zure izena eta argazkia harekin partekatu? Pertsona hau iraganean kendu duzu.",
     "description": "Shown as the message for a message request in a hidden conversation"
   },
   "MessageRequests--message-direct-blocked": {
@@ -8352,6 +8423,18 @@
     "messageformat": "Kontaktuaren erregistro-egoera egiaztatzen",
     "description": "Displayed while checking if the contact is SMS-only"
   },
+  "icu:CompositionArea__edit-action--discard": {
+    "messageformat": "Baztertu mezua",
+    "description": "aria-label for discard edit button"
+  },
+  "icu:CompositionArea__edit-action--send": {
+    "messageformat": "Bidali editatutako mezua",
+    "description": "aria-label for send edit button"
+  },
+  "icu:CompositionInput__editing-message": {
+    "messageformat": "Editatu mezua",
+    "description": "Status text displayed above composition input when editing a message"
+  },
   "countMutedConversationsDescription": {
     "message": "Sartu jakinarazpenak desaktibatuta dauzkaten elkarrizketak irakurri gabekoen kopuruan",
     "description": "(deleted 03/29/2023) Description for counting muted conversations in badge setting"
@@ -8973,7 +9056,7 @@
     "description": "Confirmation button of dialog to block a user from requesting to join via the link again"
   },
   "icu:SelectModeActions--exitSelectMode": {
-    "messageformat": "Irten hautaketa modua",
+    "messageformat": "Irten hautapen modutik",
     "description": "conversation > in select mode > composition area actions > exit select mode > accessibility label"
   },
   "icu:SelectModeActions--selectedMessages": {
@@ -8985,15 +9068,15 @@
     "description": "conversation > in select mode > composition area actions > delete selected messsages action > accessibility label"
   },
   "icu:SelectModeActions--forwardSelectedMessages": {
-    "messageformat": "Bidali hautatutako mezuak",
+    "messageformat": "Birbidali hautatutako mezuak",
     "description": "conversation > in select mode > composition area actions > forward selected messsages action > accessibility label"
   },
   "icu:SelectModeActions__confirmDelete--title": {
-    "messageformat": "{count, plural, one {Mezu {count,number} ezabatu?} other {{count,number} mezu ezabatu?}}",
+    "messageformat": "{count, plural, one {{count,number} mezu ezabatu nahi duzu?} other {{count,number} mezu ezabatu nahi dituzu?}}",
     "description": "(deleted 03/24/2023) conversation > in select mode > composition area actions > delete selected messages > confirmation modal > title"
   },
   "icu:ConfirmDeleteForMeModal--title": {
-    "messageformat": "{count, plural, one {{count,number} mezua ezabatu?} other {Ezabatu {count,number} mezu?}}",
+    "messageformat": "{count, plural, one {{count,number} mezu ezabatu nahi duzu?} other {{count,number} mezu ezabatu nahi dituzu?}}",
     "description": "(deleted 04/06/2023) delete selected messages > confirmation modal > title"
   },
   "icu:DeleteMessagesModal--title": {
@@ -9045,7 +9128,7 @@
     "description": "delete selected messages > confirmation modal > deleted for everyone (disabled) > toast > too many messages to 'delete for everyone'"
   },
   "icu:SelectModeActions__toast--TooManyMessagesToForward": {
-    "messageformat": "Gehienez 30 mezu bidali ditzakezu",
+    "messageformat": "Gehienez 30 mezu bidal ditzakezu",
     "description": "conversation > in select mode > composition area actions > forward selected messages (disabled) > toast message when too many messages"
   },
   "AvatarInput--no-photo-label--group": {
@@ -9329,7 +9412,7 @@
     "description": "Shown in the left-pane when the inbox is empty. Describes the button that composes a new message."
   },
   "icu:ForwardMessageModal__title": {
-    "messageformat": "Aurrera",
+    "messageformat": "Birbidali honi",
     "description": "Title for the forward a message modal dialog"
   },
   "ForwardMessageModal--continue": {
@@ -9341,7 +9424,7 @@
     "description": "aria-label for the 'next' button in the forward a message modal dialog"
   },
   "icu:ForwardMessagesModal__toast--CannotForwardEmptyMessage": {
-    "messageformat": "Ezin dira bidali hutsik edo ezabatutako mezuak",
+    "messageformat": "Ezin dira bidali hutsik dauden edo ezabatu diren mezuak",
     "description": "Toast message shown when trying to forward an empty or deleted message"
   },
   "TimelineDateHeader--date-in-last-6-months": {
@@ -9397,8 +9480,12 @@
     "description": "(deleted 04/04/2023) Shown in the timeline warning when you multiple group members have the same name"
   },
   "icu:ContactSpoofing__same-name-in-group--link": {
-    "messageformat": "{count, plural, one {Taldekide batek izen bera du. <reviewRequestLink>Berrikusteko eskaera</reviewRequestLink>} other {{count,number} taldekidek izen bera dute. <reviewRequestLink>Berrikusi eskaera</reviewRequestLink>}}",
+    "messageformat": "{count, plural, one {{count,number} taldekidek izen bera du. <reviewRequestLink>Berrikusi eskaera</reviewRequestLink>} other {{count,number} taldekidek izen bera dute. <reviewRequestLink>Berrikusi eskaera</reviewRequestLink>}}",
     "description": "Shown in the timeline warning when you multiple group members have the same name"
+  },
+  "icu:ContactSpoofing__same-names-in-group--link": {
+    "messageformat": "{count, plural, one {Gatazkan dagoen {count,number} izen aurkitu da talde honetan. <reviewRequestLink>Berrikusi kideak</reviewRequestLink>} other {Gatazkan dauden {count,number} izen aurkitu dira talde honetan. <reviewRequestLink>Berrikusi kideak</reviewRequestLink>}}",
+    "description": "Shown in the timeline warning when multiple names are shared by members of a group."
   },
   "ContactSpoofing__same-name__link": {
     "message": "Berrikusi eskaera",
@@ -9414,7 +9501,7 @@
   },
   "icu:ContactSpoofing__same-name-in-group__link": {
     "messageformat": "Klik berrikusteko",
-    "description": "Shown in the timeline warning when you multiple group members have the same name"
+    "description": "(deleted 05/04/2023) Shown in the timeline warning when you multiple group members have the same name"
   },
   "ContactSpoofingReviewDialog__title": {
     "message": "Berrikusi eskaera",
@@ -9463,6 +9550,10 @@
   "icu:ContactSpoofingReviewDialog__group__description": {
     "messageformat": "{count, plural, one {Taldeko kide batek izen bera du. Berrikusi beheko kideak edo aukeratu neurriak hartzea.} other {Taldeko {count,number} kidek izen bera dute. Berrikusi beheko kideak edo aukeratu neurriak hartzea.}}",
     "description": "Description for the group contact spoofing review dialog"
+  },
+  "icu:ContactSpoofingReviewDialog__group__multiple-conflicts__description": {
+    "messageformat": "{count, plural, one {Gatazkan dagoen izen bat aurkitu da talde honetan. Berrikusi beheko kideak edo aukeratu neurriak hartzea.} other {Gatazkan dauden {count,number} izen aurkitu dira talde honetan. Berrikusi beheko kideak edo aukeratu neurriak hartzea.}}",
+    "description": "Description for the group contact spoofing review dialog when there are multiple shared names"
   },
   "ContactSpoofingReviewDialog__group__members-header": {
     "message": "Kideak",
@@ -9752,6 +9843,14 @@
     "messageformat": "Kolore pertsonalizatua",
     "description": "Modal title for the custom color editor"
   },
+  "icu:GradientDial__knob-start": {
+    "messageformat": "Gradientearen hasiera",
+    "description": "aria-label for the custom color gradient creator knob"
+  },
+  "icu:GradientDial__knob-end": {
+    "messageformat": "Gradientearen amaiera",
+    "description": "aria-label for the custom color gradient creator knob"
+  },
   "customDisappearingTimeOption": {
     "message": "Denbora pertsonalizatua…",
     "description": "(deleted 03/29/2023) Text for an option in Disappearing Messages menu and Conversation Details Disappearing Messages setting when no user value is available"
@@ -9873,7 +9972,7 @@
     "description": "A message displayed when default disappearing message timeout is about to be applied"
   },
   "icu:ContactRemovedNotification__text": {
-    "messageformat": "Pertsona hau kendu duzu, berriro mezuak bidaliz gero, zure zerrendara gehituko da.",
+    "messageformat": "Pertsona hau kendu duzu. Berriro mezurik bidaltzen badiozu, zure zerrendan gehituko da.",
     "description": "A message displayed when contact was removed and will be added back on an outgoing message"
   },
   "ErrorBoundaryNotification__text": {
@@ -10221,7 +10320,7 @@
     "description": "(deleted 03/29/2023) Information shown at the bottom of the profile editor section"
   },
   "icu:ProfileEditor--info--link": {
-    "messageformat": "Zure profila zifratuta dago. Zure profila eta bertan egindako aldaketak zure kontaktuek ikusgai izango dituzte eta txat berriak hasten edo onartzen dituzunean. <learnMoreLink>Gehiago ikasi</learnMoreLink>",
+    "messageformat": "Zure profila enkriptatuta dago. Zure profila eta bertan egindako aldaketak ikusgai egongo dira zure kontaktuentzat, bai eta txat berriak hasten edo onartzen dituzunean ere. <learnMoreLink>Informazio gehiago</learnMoreLink>",
     "description": "Information shown at the bottom of the profile editor section"
   },
   "ProfileEditor--learnMore": {
@@ -10367,6 +10466,14 @@
   "icu:LeftPaneSetGroupMetadataHelper__avatar-modal-title": {
     "messageformat": "Taldearen abatarra",
     "description": "Title for the avatar picker in the group creation flow"
+  },
+  "icu:Preferences__message-audio-title": {
+    "messageformat": "Txat barruko mezuen soinua",
+    "description": "Title for message audio setting"
+  },
+  "icu:Preferences__message-audio-description": {
+    "messageformat": "Entzun bidalitako eta jasotako mezuen jakinarazpen-soinua txatean zauden bitartean.",
+    "description": "Description for message audio setting"
   },
   "Preferences__button--general": {
     "message": "Orokorra",
@@ -10681,7 +10788,7 @@
     "description": "The title of update dialog when update download is completed."
   },
   "icu:InstallScreenUpdateDialog--unsupported-os__title": {
-    "messageformat": "Eguneratzea beharrezkoa",
+    "messageformat": "Eguneratu behar da",
     "description": "The title of update dialog on install screen when user OS is unsupported"
   },
   "icu:InstallScreenUpdateDialog--auto-update__body": {
@@ -10697,7 +10804,7 @@
     "description": "The body of the update dialog on install screen when manual update was downloaded."
   },
   "icu:InstallScreenUpdateDialog--cannot-update__body": {
-    "messageformat": "Signal Desktop ezin izan da eguneratu, baina bertsio berri bat dago eskuragarri. Joan {downloadUrl} atalera eta instalatu bertsio berria eskuz. Ondoren, jarri harremanetan laguntza-zerbitzuarekin edo artxibatu arazo honi buruzko akats bat.",
+    "messageformat": "Ezin izan da eguneratu Signal Desktop, baina bertsio berri bat dago eskuragarri. Joan {downloadUrl} atalera eta instalatu bertsio berria eskuz. Ondoren, jarri harremanetan laguntza-zerbitzuarekin edo jakinarazi arazo honi buruzko akats bat.",
     "description": "The body of the update dialog on install screen when update cannot be installed."
   },
   "NSIS__retry-dialog--first-line": {
@@ -10741,7 +10848,7 @@
     "description": "Displayed when Windows installer cannot uninstall the old application"
   },
   "icu:NSIS__semver-downgrade": {
-    "messageformat": "Signal-en bertsio berriagoa instalatuta dago jada. Ziur jarraitu nahi duzula?",
+    "messageformat": "Signal-en bertsio berriago bat instalatuta dago jada. Ziur aurrera egin nahi duzula?",
     "description": "A text of the dialog displayed when user tries to overwrite Signal installation with an older version."
   },
   "CrashReportDialog__title": {
@@ -12360,6 +12467,14 @@
     "messageformat": "Edizio-historia",
     "description": "Modal title for the edit history messages modal"
   },
+  "icu:ResendMessageEdit__body": {
+    "messageformat": "Ezin izan da bidali aldaketa hau. Egiaztatu konexioa eta saiatu berriro.",
+    "description": "Modal body for the confirmation dialog shown to user when attempting to resend message edit"
+  },
+  "icu:ResendMessageEdit__button": {
+    "messageformat": "Berriro Bidali",
+    "description": "Button text for the confirmation dialog shown to user when attempting to resend message edit"
+  },
   "WhatsNew__modal-title": {
     "message": "Zer berri",
     "description": "(deleted 03/29/2023) Title for the whats new modal"
@@ -12424,24 +12539,36 @@
     "messageformat": "Doikuntza txikiak, akats-konponketak eta errendimendu-hobekuntzak. Eskerrik asko Signal erabiltzeagatik!",
     "description": "Release notes for releases that only include bug fixes"
   },
-  "icu:WhatsNew__v6.11--0": {
-    "messageformat": "Hasi zure buruarekin are azkarrago hitz egiten, \"Bakoitzarentzako oharra\" txata errazago aurkitzeko ikono berri batekin. Eskerrik asko GitHub-eko {hackerbirds}-(r)i egindako ekarpenagatik.",
-    "description": "Release notes for v6.11"
+  "icu:WhatsNew__v6.17--0": {
+    "messageformat": "Eskuinetik ezkerrerako (RTL) hizkuntzetarako laguntza hobetua.",
+    "description": "Release notes for v6.17"
   },
-  "icu:WhatsNew__v6.12--0": {
-    "messageformat": "Orain hainbat mezu hauta ditzakezu eta aldi berean birbidali edo ezabatu.",
-    "description": "Release notes for v6.12"
+  "icu:WhatsNew__v6.17--1": {
+    "messageformat": "Orain, sistemaren hobespenen arabera esleitzen dira lurralde-ezarpenak. Horrela, hainbat hizkuntza konfiguratzean, jokabide lehenetsiak hobea izan beharko luke.",
+    "description": "Release notes for v6.17"
   },
-  "icu:WhatsNew__v6.12--1": {
-    "messageformat": "Eranskailu-sortzailea eguneratu dugu diseinuaren zenbait aldaketarekin eta aholku lagungarri batzuk gehitu ditugu eranskailu artistetzat. Eranskailu-sortzailea orain zure web arakatzailean irekitzen da, eta horrek Signal Desktop apur bat txikiagoa egiten du eta leku apur bat gehiago uzten du disko gogorrean zure gogoko eranskailu pakete guztietarako.",
-    "description": "Release notes for v6.12"
+  "icu:WhatsNew__v6.17--2": {
+    "messageformat": "Argitalpen honek, gainera, erabilerraztasun-hobekuntza eta akats-konponketa ugari dakartza, eta bihotzez eskerrak eman nahi dizkiogu komunitateari haren iritzi eta iradokizunengatik.",
+    "description": "Release notes for v6.17"
   },
-  "icu:WhatsNew__v6.13--0": {
-    "messageformat": "Aurrerapen-txostena: aurrerapen-barra berria prest dago. Ikusi azkar kargatzeko prozesuari buruzko informazio gehiago Signal Desktop abiarazten duzun bakoitzean.",
-    "description": "Release notes for v6.13"
+  "icu:WhatsNew__v6.18--0": {
+    "messageformat": "Erabili \"Nabigatu atalaren arabera\" teklatuko lasterbideak (⌘/Ktrl+T eta ⌘/Ktrl+F6) aplikazioaren eremu desberdinetatik azkar mugitzeko. Tabulazio-teklen superheroi moduko bat da: bere alter ego ahulak baino urrunago eta azkarrago hegan egin dezake.",
+    "description": "Release notes for v6.18"
   },
-  "icu:WhatsNew__v6.13--1": {
-    "messageformat": "Gaiaren hobespenak Signal ezarpenetako kontrol-laukietan ere aplikatzen dira. Eskerrik asko GitHub-eko {rakleed}(r)i \"Gai ilunean gaua areagotzea\" gure EGITEKO zerrendatik kanpo egiaztatzen laguntzeagatik.",
-    "description": "Release notes for v6.13"
+  "icu:WhatsNew__v6.18--1": {
+    "messageformat": "Aukerako mezu-soinuak entzuteko aukera gehitu dugu, bidalitako eta jasotako mezuen jakinarazpenak ere entzun ahal izateko txat bat irekita dagoen bitartean (Ezarpenak > Jakinarazpenak).",
+    "description": "Release notes for v6.18"
+  },
+  "icu:WhatsNew__v6.18--2": {
+    "messageformat": "Joan txat bateko irakurri gabeko azken mezura (⌘/Ktrl+J) sagua ukitu gabe.",
+    "description": "Release notes for v6.18"
+  },
+  "icu:WhatsNew__v6.18--3": {
+    "messageformat": "Ikono eguneratuek itxura berria ematen diote aplikazioari eta irakurgarritasuna hobetzen dute.",
+    "description": "Release notes for v6.18"
+  },
+  "icu:WhatsNew__v6.18--4": {
+    "messageformat": "Hiru puntuko menuan \"Kopiatu testua\" aukera berri bat ere badago. Eskerrik asko, {yusufsahinhamza}!",
+    "description": "Release notes for v6.18"
   }
 }

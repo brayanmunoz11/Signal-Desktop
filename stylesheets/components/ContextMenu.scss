@@ -11,7 +11,8 @@
   &__popper {
     @extend %module-composition-popper;
     margin: 0;
-    padding: 6px 0px;
+    padding-block: 6px;
+    padding-inline: 0px;
     width: auto;
 
     &--single-item {
@@ -38,30 +39,33 @@
     align-items: center;
     display: flex;
     justify-content: space-between;
-    padding: 7px 12px;
+    padding-block: 7px;
+    padding-inline: 12px;
     min-width: 150px;
     width: 100%;
 
     &--container {
       display: flex;
+      align-items: center;
     }
 
     &--icon {
       height: 16px;
-      margin-right: 8px;
+      margin-inline-end: 8px;
       width: 16px;
     }
 
     &--selected {
       height: 12px;
-      margin: 0 6px;
+      margin-block: 0;
+      margin-inline: 6px;
       width: 16px;
 
       @include light-theme {
-        @include color-svg('../images/icons/v2/check-24.svg', $color-black);
+        @include color-svg('../images/icons/v3/check/check.svg', $color-black);
       }
       @include dark-theme {
-        @include color-svg('../images/icons/v2/check-24.svg', $color-white);
+        @include color-svg('../images/icons/v3/check/check.svg', $color-white);
       }
     }
 
@@ -94,7 +98,8 @@
   }
 
   &__popper--single-item &__option {
-    padding: 12px 6px;
+    padding-block: 12px;
+    padding-inline: 6px;
   }
 
   &__divider {

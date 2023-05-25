@@ -431,12 +431,16 @@ export function LeftPane({
 
     const onMouseMove = (event: MouseEvent) => {
       let width: number;
+
+      const isRTL = i18n.getLocaleDirection() === 'rtl';
+      const x = isRTL ? window.innerWidth - event.clientX : event.clientX;
+
       if (requiresFullWidth) {
-        width = Math.max(event.clientX, MIN_FULL_WIDTH);
-      } else if (event.clientX < SNAP_WIDTH) {
+        width = Math.max(x, MIN_FULL_WIDTH);
+      } else if (x < SNAP_WIDTH) {
         width = MIN_WIDTH;
       } else {
-        width = clamp(event.clientX, MIN_FULL_WIDTH, MAX_WIDTH);
+        width = clamp(x, MIN_FULL_WIDTH, MAX_WIDTH);
       }
       setPreferredWidth(Math.min(width, MAX_WIDTH));
 
@@ -456,7 +460,7 @@ export function LeftPane({
       document.body.removeEventListener('mouseup', stopResizing);
       document.body.removeEventListener('mouseleave', stopResizing);
     };
-  }, [isResizing, requiresFullWidth]);
+  }, [i18n, isResizing, requiresFullWidth]);
 
   useEffect(() => {
     if (!isResizing) {
@@ -655,6 +659,7 @@ export function LeftPane({
               <div
                 aria-live="polite"
                 className="module-left-pane__list"
+                data-supertab
                 key={listKey}
                 role="presentation"
                 tabIndex={-1}

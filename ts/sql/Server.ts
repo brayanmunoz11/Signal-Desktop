@@ -257,7 +257,6 @@ const dataInterface: ServerInterface = {
   _removeAllMessages,
   getAllMessageIds,
   getMessagesBySentAt,
-  getMessagesIncludingEditedBySentAt,
   getUnreadEditedMessagesAndMarkRead,
   getExpiredMessages,
   getMessagesUnexpectedlyMissingExpirationStartTimestamp,
@@ -366,7 +365,6 @@ const dataInterface: ServerInterface = {
   // Server-only
 
   initialize,
-  initializeRenderer,
 
   getKnownMessageAttachments,
   finishGetKnownMessageAttachments,
@@ -430,14 +428,6 @@ function rowToSticker(row: StickerRow): StickerType {
     isCoverOnly: Boolean(row.isCoverOnly),
     emoji: dropNull(row.emoji),
   };
-}
-
-function isRenderer() {
-  if (typeof process === 'undefined' || !process) {
-    return true;
-  }
-
-  return process.type === 'renderer';
 }
 
 function keyDatabase(db: Database, key: string): void {
@@ -523,7 +513,6 @@ function openAndSetUpSQLCipher(filePath: string, { key }: { key: string }) {
 
 let globalInstance: Database | undefined;
 let logger = consoleLogger;
-let globalInstanceRenderer: Database | undefined;
 let databaseFilePath: string | undefined;
 let indexedDBPath: string | undefined;
 
@@ -584,63 +573,13 @@ async function initialize({
   }
 }
 
-async function initializeRenderer({
-  configDir,
-  key,
-}: {
-  configDir: string;
-  key: string;
-}): Promise<void> {
-  if (!isRenderer()) {
-    throw new Error('Cannot call from main process.');
-  }
-  if (globalInstanceRenderer) {
-    throw new Error('Cannot initialize more than once!');
-  }
-  if (!isString(configDir)) {
-    throw new Error('initialize: configDir is required!');
-  }
-  if (!isString(key)) {
-    throw new Error('initialize: key is required!');
-  }
-
-  if (!indexedDBPath) {
-    indexedDBPath = join(configDir, 'IndexedDB');
-  }
-
-  const dbDir = join(configDir, 'sql');
-
-  if (!databaseFilePath) {
-    databaseFilePath = join(dbDir, 'db.sqlite');
-  }
-
-  let promisified: Database | undefined;
-
-  try {
-    promisified = openAndSetUpSQLCipher(databaseFilePath, { key });
-
-    // At this point we can allow general access to the database
-    globalInstanceRenderer = promisified;
-
-    // test database
-    getMessageCountSync();
-  } catch (error) {
-    log.error('Database startup error:', error.stack);
-    throw error;
-  }
-}
-
 async function close(): Promise<void> {
-  for (const dbRef of [globalInstanceRenderer, globalInstance]) {
-    // SQLLite documentation suggests that we run `PRAGMA optimize` right
-    // before closing the database connection.
-    dbRef?.pragma('optimize');
+  // SQLLite documentation suggests that we run `PRAGMA optimize` right
+  // before closing the database connection.
+  globalInstance?.pragma('optimize');
 
-    dbRef?.close();
-  }
-
+  globalInstance?.close();
   globalInstance = undefined;
-  globalInstanceRenderer = undefined;
 }
 
 async function removeDB(): Promise<void> {
@@ -677,13 +616,6 @@ async function removeIndexedDBFiles(): Promise<void> {
 }
 
 function getInstance(): Database {
-  if (isRenderer()) {
-    if (!globalInstanceRenderer) {
-      throw new Error('getInstance: globalInstanceRenderer not set!');
-    }
-    return globalInstanceRenderer;
-  }
-
   if (!globalInstance) {
     throw new Error('getInstance: globalInstance not set!');
   }
@@ -2503,26 +2435,27 @@ function getAdjacentMessagesByConversationSync(
 ): Array<MessageTypeUnhydrated> {
   const db = getInstance();
 
-  const timeFilter =
-    direction === AdjacentDirection.Older
-      ? sqlFragment`
-        (received_at = ${receivedAt} AND sent_at < ${sentAt}) OR
-        received_at < ${receivedAt}
-      `
-      : sqlFragment`
-        (received_at = ${receivedAt} AND sent_at > ${sentAt}) OR
-        received_at > ${receivedAt}
-      `;
+  let timeFilters: { first: QueryFragment; second: QueryFragment };
+  let timeOrder: QueryFragment;
 
-  const timeOrder =
-    direction === AdjacentDirection.Older
-      ? sqlFragment`DESC`
-      : sqlFragment`ASC`;
+  if (direction === AdjacentDirection.Older) {
+    timeFilters = {
+      first: sqlFragment`received_at = ${receivedAt} AND sent_at < ${sentAt}`,
+      second: sqlFragment`received_at < ${receivedAt}`,
+    };
+    timeOrder = sqlFragment`DESC`;
+  } else {
+    timeFilters = {
+      first: sqlFragment`received_at = ${receivedAt} AND sent_at > ${sentAt}`,
+      second: sqlFragment`received_at > ${receivedAt}`,
+    };
+    timeOrder = sqlFragment`ASC`;
+  }
 
   const requireDifferentMessage =
     direction === AdjacentDirection.Older || requireVisualMediaAttachments;
 
-  let template = sqlFragment`
+  const createQuery = (timeFilter: QueryFragment): QueryFragment => sqlFragment`
     SELECT json FROM messages WHERE
       conversationId = ${conversationId} AND
       ${
@@ -2540,7 +2473,13 @@ function getAdjacentMessagesByConversationSync(
       (
         ${timeFilter}
       )
-    ORDER BY received_at ${timeOrder}, sent_at ${timeOrder}
+      ORDER BY received_at ${timeOrder}, sent_at ${timeOrder}
+  `;
+
+  let template = sqlFragment`
+    SELECT first.json FROM (${createQuery(timeFilters.first)}) as first
+    UNION ALL
+    SELECT second.json FROM (${createQuery(timeFilters.second)}) as second
   `;
 
   // See `filterValidAttachments` in ts/state/ducks/lightbox.ts
@@ -3136,17 +3075,19 @@ async function getMessagesBySentAt(
   sentAt: number
 ): Promise<Array<MessageType>> {
   const db = getInstance();
-  const rows: JSONRows = db
-    .prepare<Query>(
-      `
-      SELECT json FROM messages
-      WHERE sent_at = $sent_at
-      ORDER BY received_at DESC, sent_at DESC;
-      `
-    )
-    .all({
-      sent_at: sentAt,
-    });
+
+  const [query, params] = sql`
+      SELECT messages.json, received_at, sent_at FROM edited_messages
+      INNER JOIN messages ON
+        messages.id = edited_messages.messageId
+      WHERE edited_messages.sentAt = ${sentAt}
+      UNION
+      SELECT json, received_at, sent_at FROM messages
+      WHERE sent_at = ${sentAt}
+      ORDER BY messages.received_at DESC, messages.sent_at DESC;
+    `;
+
+  const rows = db.prepare(query).all(params);
 
   return rows.map(row => jsonToObject(row.json));
 }
@@ -4156,7 +4097,15 @@ async function getAllStickerPacks(): Promise<Array<StickerPackType>> {
     )
     .all();
 
-  return rows || [];
+  return rows.map(row => {
+    return {
+      ...row,
+      // The columns have STRING type so if they have numeric value, sqlite
+      // will return integers.
+      author: String(row.author),
+      title: String(row.title),
+    };
+  });
 }
 function addUninstalledStickerPackSync(pack: UninstalledStickerPackType): void {
   const db = getInstance();
@@ -5688,7 +5637,7 @@ async function removeAllProfileKeyCredentials(): Promise<void> {
 async function saveEditedMessage(
   mainMessage: MessageType,
   ourUuid: UUIDStringType,
-  { fromId, messageId, readStatus, sentAt }: EditedMessageType
+  { conversationId, messageId, readStatus, sentAt }: EditedMessageType
 ): Promise<void> {
   const db = getInstance();
 
@@ -5702,12 +5651,12 @@ async function saveEditedMessage(
 
     const [query, params] = sql`
       INSERT INTO edited_messages (
-        fromId,
+        conversationId,
         messageId,
         sentAt,
         readStatus
       ) VALUES (
-        ${fromId},
+        ${conversationId},
         ${messageId},
         ${sentAt},
         ${readStatus}
@@ -5716,27 +5665,6 @@ async function saveEditedMessage(
 
     db.prepare(query).run(params);
   })();
-}
-
-async function getMessagesIncludingEditedBySentAt(
-  sentAt: number
-): Promise<Array<MessageType>> {
-  const db = getInstance();
-
-  const [query, params] = sql`
-    SELECT messages.json, received_at, sent_at FROM edited_messages
-    INNER JOIN messages ON
-      messages.id = edited_messages.messageId
-    WHERE edited_messages.sentAt = ${sentAt}
-    UNION
-    SELECT json, received_at, sent_at FROM messages
-    WHERE sent_at = ${sentAt}
-    ORDER BY messages.received_at DESC, messages.sent_at DESC;
-  `;
-
-  const rows = db.prepare(query).all(params);
-
-  return rows.map(row => jsonToObject(row.json));
 }
 
 async function _getAllEditedMessages(): Promise<
@@ -5754,10 +5682,10 @@ async function _getAllEditedMessages(): Promise<
 }
 
 async function getUnreadEditedMessagesAndMarkRead({
-  fromId,
+  conversationId,
   newestUnreadAt,
 }: {
-  fromId: string;
+  conversationId: string;
   newestUnreadAt: number;
 }): Promise<GetUnreadByConversationAndMarkReadResultType> {
   const db = getInstance();
@@ -5774,7 +5702,7 @@ async function getUnreadEditedMessagesAndMarkRead({
         ON messages.id = edited_messages.messageId
       WHERE
         edited_messages.readStatus = ${ReadStatus.Unread} AND
-        edited_messages.fromId = ${fromId} AND
+        edited_messages.conversationId = ${conversationId} AND
         received_at <= ${newestUnreadAt}
       ORDER BY messages.received_at DESC, messages.sent_at DESC;
     `;
@@ -5790,7 +5718,7 @@ async function getUnreadEditedMessagesAndMarkRead({
             readStatus = ${ReadStatus.Read}
           WHERE
             readStatus = ${ReadStatus.Unread} AND
-            fromId = ${fromId} AND
+            conversationId = ${conversationId} AND
             sentAt <= ${newestSentAt};
       `;
 

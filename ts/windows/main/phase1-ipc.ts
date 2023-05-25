@@ -42,6 +42,8 @@ window.RETRY_DELAY = false;
 window.platform = process.platform;
 window.getTitle = () => title;
 window.getResolvedMessagesLocale = () => config.resolvedTranslationsLocale;
+window.getResolvedMessagesLocaleDirection = () =>
+  config.resolvedTranslationsLocaleDirection;
 window.getPreferredSystemLocales = () => config.preferredSystemLocales;
 window.getEnvironment = getEnvironment;
 window.getAppInstance = () => config.appInstance;
@@ -81,17 +83,6 @@ const IPC: IPCType = {
     ipc.send('draw-attention');
   },
   getAutoLaunch: () => ipc.invoke('get-auto-launch'),
-  getBuiltInImages: () =>
-    new Promise((resolve, reject) => {
-      ipc.once('get-success-built-in-images', (_event, error, value) => {
-        if (error) {
-          return reject(new Error(error));
-        }
-
-        return resolve(value);
-      });
-      ipc.send('get-built-in-images');
-    }),
   getMediaPermissions: () => ipc.invoke('settings:get:mediaPermissions'),
   getMediaCameraPermissions: () =>
     ipc.invoke('settings:get:mediaCameraPermissions'),

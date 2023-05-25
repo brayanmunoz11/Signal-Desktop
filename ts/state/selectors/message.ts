@@ -7,6 +7,8 @@ import filesize from 'filesize';
 import getDirection from 'direction';
 import emojiRegex from 'emoji-regex';
 import LinkifyIt from 'linkify-it';
+import type { ReadonlyDeep } from 'type-fest';
+
 import type { StateType } from '../reducer';
 import type {
   LastMessageStatus,
@@ -66,6 +68,7 @@ import { isNotNil } from '../../util/isNotNil';
 import { isMoreRecentThan } from '../../util/timestamp';
 import * as iterables from '../../util/iterables';
 import { strictAssert } from '../../util/assert';
+import { canEditMessage } from '../../util/canEditMessage';
 
 import { getAccountSelector } from './accounts';
 import {
@@ -502,9 +505,8 @@ const getPropsForStoryReplyContext = (
 };
 
 export const getPropsForQuote = (
-  message: Pick<
-    MessageWithUIFieldsType,
-    'conversationId' | 'quote' | 'payment'
+  message: ReadonlyDeep<
+    Pick<MessageWithUIFieldsType, 'conversationId' | 'quote'>
   >,
   {
     conversationSelector,
@@ -717,6 +719,8 @@ export const getPropsForMessage = (
     storyReplyContext,
     textAttachment,
     payment,
+    canCopy: canCopy(message),
+    canEditMessage: canEditMessage(message),
     canDeleteForEveryone: canDeleteForEveryone(message),
     canDownload: canDownload(message, conversationSelector),
     canReact: canReact(message, ourConversationId, conversationSelector),
@@ -1767,6 +1771,12 @@ export function canReact(
 ): boolean {
   const conversation = getConversation(message, conversationSelector);
   return canReplyOrReact(message, ourConversationId, conversation);
+}
+
+export function canCopy(
+  message: Pick<MessageWithUIFieldsType, 'body' | 'deletedForEveryone'>
+): boolean {
+  return !message.deletedForEveryone && Boolean(message.body);
 }
 
 export function canDeleteForEveryone(

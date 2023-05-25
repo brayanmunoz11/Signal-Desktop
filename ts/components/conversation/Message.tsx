@@ -91,14 +91,15 @@ import { getBadgeImageFileLocalPath } from '../../badges/getBadgeImageFileLocalP
 import { handleOutsideClick } from '../../util/handleOutsideClick';
 import { PaymentEventKind } from '../../types/Payment';
 import type { AnyPaymentEvent } from '../../types/Payment';
-import { Emojify } from './Emojify';
 import { getPaymentEventDescription } from '../../messages/helpers';
 import { PanelType } from '../../types/Panels';
 import { openLinkInWebBrowser } from '../../util/openLinkInWebBrowser';
 import { RenderLocation } from './MessageTextRenderer';
+import { UserText } from '../UserText';
 
 const GUESS_METADATA_WIDTH_TIMESTAMP_SIZE = 16;
 const GUESS_METADATA_WIDTH_EXPIRE_TIMER_SIZE = 18;
+const GUESS_METADATA_WIDTH_EDITED_SIZE = 40;
 const GUESS_METADATA_WIDTH_OUTGOING_SIZE: Record<MessageStatusType, number> = {
   delivered: 24,
   error: 24,
@@ -139,6 +140,13 @@ export enum TextDirection {
   Default = 'Default',
   None = 'None',
 }
+
+const TextDirectionToDirAttribute = {
+  [TextDirection.LeftToRight]: 'ltr',
+  [TextDirection.RightToLeft]: 'rtl',
+  [TextDirection.Default]: 'auto',
+  [TextDirection.None]: 'auto',
+};
 
 export const MessageStatuses = [
   'delivered',
@@ -210,7 +218,7 @@ export type PropsData = {
   isTargetedCounter?: number;
   isSelected: boolean;
   isSelectMode: boolean;
-  isSpoilerExpanded?: boolean;
+  isSpoilerExpanded?: Record<number, boolean>;
   direction: DirectionType;
   timestamp: number;
   status?: MessageStatusType;
@@ -314,8 +322,9 @@ export type PropsActions = {
   showConversation: ShowConversationType;
   openGiftBadge: (messageId: string) => void;
   pushPanelForConversation: PushPanelForConversationActionType;
+  retryMessageSend: (messageId: string) => unknown;
   showContactModal: (contactId: string, conversationId?: string) => void;
-  showSpoiler: (messageId: string) => void;
+  showSpoiler: (messageId: string, data: Record<number, boolean>) => void;
 
   kickOffAttachmentDownload: (options: {
     attachment: AttachmentType;
@@ -563,11 +572,8 @@ export class Message extends React.PureComponent<Props, State> {
       shouldHideMetadata,
       status,
       text,
-      textDirection,
     }: Readonly<Props> = this.props
   ): MetadataPlacement {
-    const isRTL = textDirection === TextDirection.RightToLeft;
-
     if (
       !expirationLength &&
       !expirationTimestamp &&
@@ -601,10 +607,6 @@ export class Message extends React.PureComponent<Props, State> {
       return MetadataPlacement.Bottom;
     }
 
-    if (isRTL) {
-      return MetadataPlacement.Bottom;
-    }
-
     return MetadataPlacement.InlineWithText;
   }
 
@@ -617,9 +619,13 @@ export class Message extends React.PureComponent<Props, State> {
    * because it can reduce layout jumpiness.
    */
   private guessMetadataWidth(): number {
-    const { direction, expirationLength, status } = this.props;
+    const { direction, expirationLength, status, isEditedMessage } = this.props;
 
     let result = GUESS_METADATA_WIDTH_TIMESTAMP_SIZE;
+
+    if (isEditedMessage) {
+      result += GUESS_METADATA_WIDTH_EDITED_SIZE;
+    }
 
     const hasExpireTimer = Boolean(expirationLength);
     if (hasExpireTimer) {
@@ -790,6 +796,7 @@ export class Message extends React.PureComponent<Props, State> {
       isEditedMessage,
       isSticker,
       isTapToViewExpired,
+      retryMessageSend,
       pushPanelForConversation,
       showEditHistoryModal,
       status,
@@ -816,6 +823,7 @@ export class Message extends React.PureComponent<Props, State> {
         isTapToViewExpired={isTapToViewExpired}
         onWidthMeasured={isInline ? this.updateMetadataWidth : undefined}
         pushPanelForConversation={pushPanelForConversation}
+        retryMessageSend={retryMessageSend}
         showEditHistoryModal={showEditHistoryModal}
         status={status}
         textPending={textAttachment?.pending}
@@ -1200,6 +1208,7 @@ export class Message extends React.PureComponent<Props, State> {
             </div>
           ) : null}
           <div
+            dir="auto"
             className={classNames(
               'module-message__link-preview__text',
               previewHasImage && !isFullSizeImage
@@ -1269,7 +1278,6 @@ export class Message extends React.PureComponent<Props, State> {
         direction === 'incoming'
           ? i18n('icu:message--donation--unopened--incoming')
           : i18n('icu:message--donation--unopened--outgoing');
-      const isRTL = getDirection(description) === 'rtl';
       const { metadataWidth } = this.state;
 
       return (
@@ -1309,7 +1317,6 @@ export class Message extends React.PureComponent<Props, State> {
                 'module-message__text',
                 `module-message__text--${direction}`
               )}
-              dir={isRTL ? 'rtl' : undefined}
             >
               {description}
               {this.getMetadataPlacement() ===
@@ -1479,7 +1486,7 @@ export class Message extends React.PureComponent<Props, State> {
         </p>
         {payment.note != null && (
           <p className="module-payment-notification__note">
-            <Emojify text={payment.note} />
+            <UserText text={payment.note} />
           </p>
         )}
       </div>
@@ -1757,10 +1764,8 @@ export class Message extends React.PureComponent<Props, State> {
       status,
       text,
       textAttachment,
-      textDirection,
     } = this.props;
     const { metadataWidth } = this.state;
-    const isRTL = textDirection === TextDirection.RightToLeft;
 
     // eslint-disable-next-line no-nested-ternary
     const contents = deletedForEveryone
@@ -1785,7 +1790,6 @@ export class Message extends React.PureComponent<Props, State> {
             ? 'module-message__text--delete-for-everyone'
             : null
         )}
-        dir={isRTL ? 'rtl' : undefined}
         onDoubleClick={(event: React.MouseEvent) => {
           // Prevent double-click interefering with interactions _inside_
           // the bubble.
@@ -1799,7 +1803,7 @@ export class Message extends React.PureComponent<Props, State> {
           displayLimit={displayLimit}
           i18n={i18n}
           id={id}
-          isSpoilerExpanded={isSpoilerExpanded || false}
+          isSpoilerExpanded={isSpoilerExpanded || {}}
           kickOffBodyDownload={() => {
             if (!textAttachment) {
               return;
@@ -1812,14 +1816,13 @@ export class Message extends React.PureComponent<Props, State> {
           messageExpanded={messageExpanded}
           showConversation={showConversation}
           renderLocation={RenderLocation.Timeline}
-          onExpandSpoiler={() => showSpoiler(id)}
+          onExpandSpoiler={data => showSpoiler(id, data)}
           text={contents || ''}
           textAttachment={textAttachment}
         />
-        {!isRTL &&
-          this.getMetadataPlacement() === MetadataPlacement.InlineWithText && (
-            <MessageTextMetadataSpacer metadataWidth={metadataWidth} />
-          )}
+        {this.getMetadataPlacement() === MetadataPlacement.InlineWithText && (
+          <MessageTextMetadataSpacer metadataWidth={metadataWidth} />
+        )}
       </div>
     );
   }
@@ -2104,11 +2107,33 @@ export class Message extends React.PureComponent<Props, State> {
       ['desc', 'desc']
     );
     // Take the first three groups for rendering
-    const toRender = take(ordered, 3).map(res => ({
-      emoji: res[0].emoji,
-      count: res.length,
-      isMe: res.some(re => Boolean(re.from.isMe)),
-    }));
+    const toRender = take(ordered, 3).map(res => {
+      const isMe = res.some(re => Boolean(re.from.isMe));
+      const count = res.length;
+      const { emoji } = res[0];
+
+      let label: string;
+      if (isMe) {
+        label = i18n('icu:Message__reaction-emoji-label--you', { emoji });
+      } else if (count === 1) {
+        label = i18n('icu:Message__reaction-emoji-label--single', {
+          title: res[0].from.title,
+          emoji,
+        });
+      } else {
+        label = i18n('icu:Message__reaction-emoji-label--many', {
+          count,
+          emoji,
+        });
+      }
+
+      return {
+        count,
+        emoji,
+        isMe,
+        label,
+      };
+    });
     const someNotRendered = ordered.length > 3;
     // We only drop two here because the third emoji would be replaced by the
     // more button
@@ -2151,6 +2176,7 @@ export class Message extends React.PureComponent<Props, State> {
 
                 return (
                   <button
+                    aria-label={re.label}
                     type="button"
                     // eslint-disable-next-line react/no-array-index-key
                     key={`${re.emoji}-${i}`}
@@ -2485,6 +2511,7 @@ export class Message extends React.PureComponent<Props, State> {
       deletedForEveryone,
       direction,
       giftBadge,
+      id,
       isSticker,
       isTapToView,
       isTapToViewExpired,
@@ -2492,6 +2519,7 @@ export class Message extends React.PureComponent<Props, State> {
       onContextMenu,
       onKeyDown,
       text,
+      textDirection,
     } = this.props;
     const { isTargeted } = this.state;
 
@@ -2549,6 +2577,7 @@ export class Message extends React.PureComponent<Props, State> {
       <div className="module-message__container-outer">
         <div
           className={containerClassnames}
+          id={`message-accessibility-contents:${id}`}
           style={containerStyles}
           onContextMenu={onContextMenu}
           role="row"
@@ -2561,7 +2590,9 @@ export class Message extends React.PureComponent<Props, State> {
           tabIndex={-1}
         >
           {this.renderAuthor()}
-          {this.renderContents()}
+          <div dir={TextDirectionToDirAttribute[textDirection]}>
+            {this.renderContents()}
+          </div>
         </div>
         {this.renderReactions(direction === 'outgoing')}
       </div>
@@ -2592,6 +2623,7 @@ export class Message extends React.PureComponent<Props, State> {
       id,
       attachments,
       direction,
+      i18n,
       isSticker,
       isSelected,
       isSelectMode,
@@ -2675,11 +2707,14 @@ export class Message extends React.PureComponent<Props, State> {
 
     return (
       <div
+        aria-labelledby={`message-accessibility-contents:${id}`}
+        aria-roledescription={i18n('icu:Message__role-description')}
         className={classNames(
           'module-message__wrapper',
           isSelectMode && 'module-message__wrapper--select-mode',
           isSelected && 'module-message__wrapper--selected'
         )}
+        role="article"
         {...wrapperProps}
       >
         {isSelectMode && (

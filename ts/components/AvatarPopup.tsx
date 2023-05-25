@@ -9,16 +9,16 @@ import { Avatar, AvatarSize } from './Avatar';
 import { useRestoreFocus } from '../hooks/useRestoreFocus';
 
 import type { LocalizerType, ThemeType } from '../types/Util';
-import { Emojify } from './conversation/Emojify';
+import { UserText } from './UserText';
 
 export type Props = {
   readonly i18n: LocalizerType;
   readonly theme: ThemeType;
 
   hasPendingUpdate: boolean;
-  startUpdate: () => unknown;
 
   onEditProfile: () => unknown;
+  onStartUpdate: () => unknown;
   onViewPreferences: () => unknown;
   onViewArchive: () => unknown;
 
@@ -34,11 +34,11 @@ export function AvatarPopup(props: Props): JSX.Element {
     i18n,
     name,
     onEditProfile,
+    onStartUpdate,
     onViewArchive,
     onViewPreferences,
     phoneNumber,
     profileName,
-    startUpdate,
     style,
     title,
   } = props;
@@ -61,7 +61,7 @@ export function AvatarPopup(props: Props): JSX.Element {
         <Avatar {...props} size={AvatarSize.FORTY_EIGHT} />
         <div className="module-avatar-popup__profile__text">
           <div className="module-avatar-popup__profile__name">
-            <Emojify text={profileName || title} />
+            <UserText text={profileName || title} />
           </div>
           {shouldShowNumber ? (
             <div className="module-avatar-popup__profile__number">
@@ -105,7 +105,7 @@ export function AvatarPopup(props: Props): JSX.Element {
         <button
           type="button"
           className="module-avatar-popup__item"
-          onClick={startUpdate}
+          onClick={onStartUpdate}
         >
           <div
             className={classNames(

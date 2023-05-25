@@ -381,7 +381,11 @@ export const EmojiPicker = React.memo(
                     handleToggleSearch(event);
                   }
                 }}
-                title={i18n('icu:EmojiPicker--search-placeholder')}
+                title={
+                  searchMode
+                    ? i18n('icu:EmojiPicker--search-close')
+                    : i18n('icu:EmojiPicker--search-placeholder')
+                }
                 className={classNames(
                   'module-emoji-picker__button',
                   'module-emoji-picker__button--icon',
@@ -398,12 +402,14 @@ export const EmojiPicker = React.memo(
                     className="module-emoji-picker__header__search-field__input"
                     placeholder={i18n('icu:EmojiPicker--search-placeholder')}
                     onChange={handleSearchChange}
+                    dir="auto"
                   />
                 </div>
               ) : (
                 categories.map(cat =>
                   cat === 'recents' && firstRecent.length === 0 ? null : (
                     <button
+                      aria-pressed={selectedCategory === cat}
                       type="button"
                       key={cat}
                       data-category={cat}
@@ -463,7 +469,7 @@ export const EmojiPicker = React.memo(
                 <Emoji
                   shortName="slightly_frowning_face"
                   size={16}
-                  style={{ marginLeft: '4px' }}
+                  style={{ marginInlineStart: '4px' }}
                 />
               </div>
             )}
@@ -499,6 +505,7 @@ export const EmojiPicker = React.memo(
                 <div className="module-emoji-picker__footer__skin-tones">
                   {[0, 1, 2, 3, 4, 5].map(tone => (
                     <button
+                      aria-pressed={selectedTone === tone}
                       type="button"
                       key={tone}
                       data-tone={tone}

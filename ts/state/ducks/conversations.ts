@@ -12,6 +12,7 @@ import {
   without,
 } from 'lodash';
 
+import { clipboard } from 'electron';
 import type { ReadonlyDeep } from 'type-fest';
 import type { AttachmentType } from '../../types/Attachment';
 import type { StateType as RootStateType } from '../reducer';
@@ -51,8 +52,9 @@ import type {
   CustomColorType,
 } from '../../types/Colors';
 import type {
-  LastMessageStatus,
   ConversationAttributesType,
+  DraftEditMessageType,
+  LastMessageStatus,
   MessageAttributesType,
 } from '../../model-types.d';
 import type {
@@ -76,6 +78,7 @@ import { writeProfile } from '../../services/writeProfile';
 import {
   getConversationUuidsStoppingSend,
   getConversationIdsStoppedForVerification,
+  getConversationSelector,
   getMe,
   getMessagesByConversation,
 } from '../selectors/conversations';
@@ -108,7 +111,7 @@ import {
 import { missingCaseError } from '../../util/missingCaseError';
 import { viewSyncJobQueue } from '../../jobs/viewSyncJobQueue';
 import { ReadStatus } from '../../messages/MessageReadStatus';
-import { isIncoming, isOutgoing } from '../selectors/message';
+import { isIncoming, processBodyRanges } from '../selectors/message';
 import { getActiveCallState } from '../selectors/calling';
 import { sendDeleteForEveryoneMessage } from '../../util/sendDeleteForEveryoneMessage';
 import type { ShowToastActionType } from './toast';
@@ -135,6 +138,7 @@ import { DAY } from '../../util/durations';
 import { isNotNil } from '../../util/isNotNil';
 import { PanelType } from '../../types/Panels';
 import { startConversation } from '../../util/startConversation';
+import { getMessageSentTimestamp } from '../../util/getMessageSentTimestamp';
 import { UUIDKind } from '../../types/UUID';
 import { removeLinkPreview } from '../../services/LinkPreview';
 import type {
@@ -144,6 +148,7 @@ import type {
   SetQuotedMessageActionType,
 } from './composer';
 import {
+  SET_FOCUS,
   replaceAttachments,
   setComposerFocus,
   setQuoteByMessageId,
@@ -152,6 +157,8 @@ import {
 } from './composer';
 import { ReceiptType } from '../../types/Receipt';
 import { sortByMessageOrder } from '../../util/maybeForwardMessages';
+import { Sound, SoundType } from '../../util/Sound';
+import { canEditMessage } from '../../util/canEditMessage';
 
 // State
 
@@ -176,7 +183,7 @@ export type MessageType = MessageAttributesType & {
 // eslint-disable-next-line local-rules/type-alias-readonlydeep
 export type MessageWithUIFieldsType = MessageAttributesType & {
   displayLimit?: number;
-  isSpoilerExpanded?: boolean;
+  isSpoilerExpanded?: Record<number, boolean>;
 };
 
 export const ConversationTypes = ['direct', 'group'] as const;
@@ -288,6 +295,7 @@ export type ConversationType = ReadonlyDeep<
     shouldShowDraft?: boolean;
     // Full information for re-hydrating composition area
     draftText?: string;
+    draftEditMessage?: DraftEditMessageType;
     draftBodyRanges?: DraftBodyRanges;
     // Summary for the left pane
     draftPreview?: DraftPreviewType;
@@ -727,6 +735,7 @@ export type ShowSpoilerActionType = ReadonlyDeep<{
   type: typeof SHOW_SPOILER;
   payload: {
     id: string;
+    data: Record<number, boolean>;
   };
 }>;
 
@@ -1003,6 +1012,7 @@ export const actions = {
   deleteMessages,
   deleteMessagesForEveryone,
   destroyMessages,
+  discardEditMessage,
   discardMessages,
   doubleCheckMissingQuoteReference,
   generateNewGroupLink,
@@ -1039,6 +1049,7 @@ export const actions = {
   repairOldestMessage,
   replaceAvatar,
   resetAllChatColors,
+  copyMessageText,
   retryDeleteForEveryone,
   retryMessageSend,
   reviewGroupMemberNameCollision,
@@ -1063,6 +1074,7 @@ export const actions = {
   setIsFetchingUUID,
   setIsNearBottom,
   setMessageLoadingState,
+  setMessageToEdit,
   setMuteExpiration,
   setPinned,
   setPreJoinConversation,
@@ -1623,9 +1635,6 @@ function deleteMessages({
       throw new Error('deleteMessage: No conversation found');
     }
 
-    let outgoingDeleted = 0;
-    let incomingDeleted = 0;
-
     await Promise.all(
       messageIds.map(async messageId => {
         const message = await getMessageById(messageId);
@@ -1638,12 +1647,6 @@ function deleteMessages({
           throw new Error(
             `deleteMessages: message conversation ${messageConversationId} doesn't match provided conversation ${conversationId}`
           );
-        }
-
-        if (isOutgoing(message.attributes)) {
-          outgoingDeleted += 1;
-        } else {
-          incomingDeleted += 1;
         }
       })
     );
@@ -1667,12 +1670,6 @@ function deleteMessages({
 
     await window.Signal.Data.removeMessages(messageIds);
 
-    if (outgoingDeleted > 0) {
-      conversation.decrementSentMessageCount(outgoingDeleted);
-    }
-    if (incomingDeleted > 0) {
-      conversation.decrementMessageCount(incomingDeleted);
-    }
     popPanelForConversation()(dispatch, getState, undefined);
 
     if (nearbyMessageId != null) {
@@ -1713,6 +1710,73 @@ function destroyMessages(
     dispatch({
       type: 'NOOP',
       payload: null,
+    });
+  };
+}
+
+function discardEditMessage(
+  conversationId: string
+): ThunkAction<void, RootStateType, unknown, never> {
+  return () => {
+    window.ConversationController.get(conversationId)?.set(
+      {
+        draftEditMessage: undefined,
+        draftBodyRanges: undefined,
+        draft: undefined,
+        quotedMessageId: undefined,
+      },
+      { unset: true }
+    );
+  };
+}
+
+function setMessageToEdit(
+  conversationId: string,
+  messageId: string
+): ThunkAction<void, RootStateType, unknown, SetFocusActionType> {
+  return async (dispatch, getState) => {
+    const conversation = window.ConversationController.get(conversationId);
+
+    if (!conversation) {
+      return;
+    }
+
+    const message = (await getMessageById(messageId))?.attributes;
+    if (!message) {
+      return;
+    }
+
+    if (!canEditMessage(message) || !message.body) {
+      return;
+    }
+
+    let attachmentThumbnail: string | undefined;
+    if (message.attachments) {
+      const thumbnailPath = message.attachments[0]?.thumbnail?.path;
+      attachmentThumbnail = thumbnailPath
+        ? window.Signal.Migrations.getAbsoluteAttachmentPath(thumbnailPath)
+        : undefined;
+    }
+
+    conversation.set({
+      draftEditMessage: {
+        body: message.body,
+        editHistoryLength: message.editHistory?.length ?? 0,
+        attachmentThumbnail,
+        preview: message.preview ? message.preview[0] : undefined,
+        targetMessageId: messageId,
+        quote: message.quote,
+      },
+      draftBodyRanges: processBodyRanges(message, {
+        conversationSelector: getConversationSelector(getState()),
+      }),
+    });
+
+    dispatch({
+      type: SET_FOCUS,
+      payload: {
+        conversationId,
+      },
     });
   };
 }
@@ -1759,7 +1823,7 @@ export const markViewed = (messageId: string): void => {
 
   const senderE164 = message.get('source');
   const senderUuid = message.get('sourceUuid');
-  const timestamp = message.get('sent_at');
+  const timestamp = getMessageSentTimestamp(message.attributes, { log });
 
   message.set(messageUpdaterMarkViewed(message.attributes, Date.now()));
 
@@ -2085,6 +2149,25 @@ function retryMessageSend(
       throw new Error(`retryMessageSend: Message ${messageId} missing!`);
     }
     await message.retrySend();
+
+    dispatch({
+      type: 'NOOP',
+      payload: null,
+    });
+  };
+}
+
+export function copyMessageText(
+  messageId: string
+): ThunkAction<void, RootStateType, unknown, NoopActionType> {
+  return async dispatch => {
+    const message = await getMessageById(messageId);
+    if (!message) {
+      throw new Error(`copy: Message ${messageId} missing!`);
+    }
+
+    const body = message.getNotificationText();
+    clipboard.writeText(body);
 
     dispatch({
       type: 'NOOP',
@@ -2641,11 +2724,15 @@ function messageExpanded(
     },
   };
 }
-function showSpoiler(id: string): ShowSpoilerActionType {
+function showSpoiler(
+  id: string,
+  data: Record<number, boolean>
+): ShowSpoilerActionType {
   return {
     type: SHOW_SPOILER,
     payload: {
       id,
+      data,
     },
   };
 }
@@ -2671,16 +2758,30 @@ function messagesAdded({
   isJustSent: boolean;
   isNewMessage: boolean;
   messages: ReadonlyArray<MessageAttributesType>;
-}): MessagesAddedActionType {
-  return {
-    type: 'MESSAGES_ADDED',
-    payload: {
-      conversationId,
-      isActive,
-      isJustSent,
-      isNewMessage,
-      messages,
-    },
+}): ThunkAction<void, RootStateType, unknown, MessagesAddedActionType> {
+  return (dispatch, getState) => {
+    const state = getState();
+    if (
+      isNewMessage &&
+      state.items.audioMessage &&
+      conversationId === state.conversations.selectedConversationId &&
+      isActive &&
+      !isJustSent &&
+      messages.some(isIncoming)
+    ) {
+      drop(new Sound({ soundType: SoundType.Pop }).play());
+    }
+
+    dispatch({
+      type: 'MESSAGES_ADDED',
+      payload: {
+        conversationId,
+        isActive,
+        isJustSent,
+        isNewMessage,
+        messages,
+      },
+    });
   };
 }
 
@@ -2885,7 +2986,7 @@ function deleteMessagesForEveryone(
 
           await sendDeleteForEveryoneMessage(conversation.attributes, {
             id: message.id,
-            timestamp: message.get('sent_at'),
+            timestamp: getMessageSentTimestamp(message.attributes, { log }),
           });
         } catch (error) {
           hasError = true;
@@ -4868,7 +4969,7 @@ export function reducer(
     };
   }
   if (action.type === SHOW_SPOILER) {
-    const { id } = action.payload;
+    const { id, data } = action.payload;
 
     const existingMessage = state.messagesLookup[id];
     if (!existingMessage) {
@@ -4877,7 +4978,7 @@ export function reducer(
 
     const updatedMessage = {
       ...existingMessage,
-      isSpoilerExpanded: true,
+      isSpoilerExpanded: data,
     };
 
     return {

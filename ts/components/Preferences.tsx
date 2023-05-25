@@ -1,11 +1,17 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import type { AudioDevice } from '@signalapp/ringrtc';
 import type { ReactNode } from 'react';
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { noop } from 'lodash';
 import classNames from 'classnames';
-import type { AudioDevice } from '@signalapp/ringrtc';
 import uuid from 'uuid';
 
 import type { MediaDeviceSettings } from '../types/Calling';
@@ -15,6 +21,19 @@ import type {
   ZoomFactorType,
 } from '../types/Storage.d';
 import type { ThemeSettingType } from '../types/StorageUIKeys';
+import type { ConversationType } from '../state/ducks/conversations';
+import type {
+  ConversationColorType,
+  CustomColorType,
+  DefaultConversationColorType,
+} from '../types/Colors';
+import type {
+  LocalizerType,
+  SentMediaQualityType,
+  ThemeType,
+} from '../types/Util';
+import type { ExecuteMenuRoleType } from './TitleBarContainer';
+
 import { Button, ButtonVariant } from './Button';
 import { ChatColorPicker } from './ChatColorPicker';
 import { Checkbox } from './Checkbox';
@@ -23,24 +42,12 @@ import {
   Variant as CircleCheckboxVariant,
 } from './CircleCheckbox';
 import { ConfirmationDialog } from './ConfirmationDialog';
-import type { ConversationType } from '../state/ducks/conversations';
-import type {
-  ConversationColorType,
-  CustomColorType,
-  DefaultConversationColorType,
-} from '../types/Colors';
 import { DisappearingTimeDialog } from './DisappearingTimeDialog';
-import type {
-  LocalizerType,
-  SentMediaQualityType,
-  ThemeType,
-} from '../types/Util';
 import { PhoneNumberDiscoverability } from '../util/phoneNumberDiscoverability';
 import { PhoneNumberSharingMode } from '../util/phoneNumberSharingMode';
 import { Select } from './Select';
 import { Spinner } from './Spinner';
 import { TitleBarContainer } from './TitleBarContainer';
-import type { ExecuteMenuRoleType } from './TitleBarContainer';
 import { getCustomColorStyle } from '../util/getCustomColorStyle';
 import {
   DEFAULT_DURATIONS_IN_SECONDS,
@@ -51,6 +58,7 @@ import { DurationInSeconds } from '../util/durations';
 import { useEscapeHandling } from '../hooks/useEscapeHandling';
 import { useUniqueId } from '../hooks/useUniqueId';
 import { useTheme } from '../hooks/useTheme';
+import { focusableSelectors } from '../util/focusableSelectors';
 
 type CheckboxChangeHandlerType = (value: boolean) => unknown;
 type SelectChangeHandlerType<T = string | number> = (value: T) => unknown;
@@ -72,6 +80,7 @@ export type PropsDataType = {
   hasLinkPreviews: boolean;
   hasMediaCameraPermissions: boolean;
   hasMediaPermissions: boolean;
+  hasMessageAudio: boolean;
   hasMinimizeToAndStartInSystemTray: boolean;
   hasMinimizeToSystemTray: boolean;
   hasNotificationAttention: boolean;
@@ -103,7 +112,6 @@ export type PropsDataType = {
   isFormattingFlagEnabled: boolean;
 
   // Limited support features
-  isAudioNotificationsSupported: boolean;
   isAutoDownloadUpdatesSupported: boolean;
   isAutoLaunchSupported: boolean;
   isHideMenuBarSupported: boolean;
@@ -155,6 +163,7 @@ type PropsFunctionType = {
   onLastSyncTimeChange: (time: number) => unknown;
   onMediaCameraPermissionsChange: CheckboxChangeHandlerType;
   onMediaPermissionsChange: CheckboxChangeHandlerType;
+  onMessageAudioChange: CheckboxChangeHandlerType;
   onMinimizeToAndStartInSystemTrayChange: CheckboxChangeHandlerType;
   onMinimizeToSystemTrayChange: CheckboxChangeHandlerType;
   onNotificationAttentionChange: CheckboxChangeHandlerType;
@@ -178,6 +187,8 @@ type PropsFunctionType = {
 };
 
 export type PropsType = PropsDataType & PropsFunctionType;
+
+export type PropsPreloadType = Omit<PropsType, 'i18n'>;
 
 enum Page {
   // Accessible through left nav
@@ -242,6 +253,7 @@ export function Preferences({
   hasLinkPreviews,
   hasMediaCameraPermissions,
   hasMediaPermissions,
+  hasMessageAudio,
   hasMinimizeToAndStartInSystemTray,
   hasMinimizeToSystemTray,
   hasNotificationAttention,
@@ -254,7 +266,6 @@ export function Preferences({
   hasTypingIndicators,
   i18n,
   initialSpellCheckSetting,
-  isAudioNotificationsSupported,
   isAutoDownloadUpdatesSupported,
   isAutoLaunchSupported,
   isFormattingFlagEnabled,
@@ -280,6 +291,7 @@ export function Preferences({
   onLastSyncTimeChange,
   onMediaCameraPermissionsChange,
   onMediaPermissionsChange,
+  onMessageAudioChange,
   onMinimizeToAndStartInSystemTrayChange,
   onMinimizeToSystemTrayChange,
   onNotificationAttentionChange,
@@ -350,6 +362,27 @@ export function Preferences({
     },
     [onSelectedMicrophoneChange, availableMicrophones]
   );
+
+  const selectors = useMemo(() => focusableSelectors.join(','), []);
+  const settingsPaneRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const settingsPane = settingsPaneRef.current;
+    if (!settingsPane) {
+      return;
+    }
+
+    const elements = settingsPane.querySelectorAll<
+      | HTMLAnchorElement
+      | HTMLButtonElement
+      | HTMLInputElement
+      | HTMLSelectElement
+      | HTMLTextAreaElement
+    >(selectors);
+    if (!elements.length) {
+      return;
+    }
+    elements[0]?.focus();
+  }, [page, selectors]);
 
   const onAudioOutputSelectChange = useCallback(
     (value: string) => {
@@ -572,7 +605,7 @@ export function Preferences({
           {isFormattingFlagEnabled && (
             <Checkbox
               checked={hasTextFormatting}
-              label={i18n('icu:textFormattingDescripton')}
+              label={i18n('icu:textFormattingDescription')}
               moduleClassName="Preferences__checkbox"
               name="textFormatting"
               onChange={onTextFormattingChange}
@@ -837,15 +870,6 @@ export function Preferences({
               onChange={onNotificationAttentionChange}
             />
           )}
-          {isAudioNotificationsSupported && (
-            <Checkbox
-              checked={hasAudioNotifications}
-              label={i18n('icu:audioNotificationDescription')}
-              moduleClassName="Preferences__checkbox"
-              name="audioNotification"
-              onChange={onAudioNotificationsChange}
-            />
-          )}
           <Checkbox
             checked={hasCountMutedConversations}
             label={i18n('icu:countMutedConversationsDescription')}
@@ -879,6 +903,23 @@ export function Preferences({
                 value={notificationContent}
               />
             }
+          />
+        </SettingsRow>
+        <SettingsRow>
+          <Checkbox
+            checked={hasAudioNotifications}
+            label={i18n('icu:audioNotificationDescription')}
+            moduleClassName="Preferences__checkbox"
+            name="audioNotification"
+            onChange={onAudioNotificationsChange}
+          />
+          <Checkbox
+            checked={hasMessageAudio}
+            description={i18n('icu:Preferences__message-audio-description')}
+            label={i18n('icu:Preferences__message-audio-title')}
+            moduleClassName="Preferences__checkbox"
+            name="messageAudio"
+            onChange={onMessageAudioChange}
           />
         </SettingsRow>
       </>
@@ -1286,7 +1327,9 @@ export function Preferences({
             {i18n('icu:Preferences__button--privacy')}
           </button>
         </div>
-        <div className="Preferences__settings-pane">{settings}</div>
+        <div className="Preferences__settings-pane" ref={settingsPaneRef}>
+          {settings}
+        </div>
       </div>
     </TitleBarContainer>
   );
@@ -1302,10 +1345,10 @@ function SettingsRow({
   className?: string;
 }): JSX.Element {
   return (
-    <div className={classNames('Preferences__settings-row', className)}>
-      {title && <h3 className="Preferences__padding">{title}</h3>}
+    <fieldset className={classNames('Preferences__settings-row', className)}>
+      {title && <legend className="Preferences__padding">{title}</legend>}
       {children}
-    </div>
+    </fieldset>
   );
 }
 

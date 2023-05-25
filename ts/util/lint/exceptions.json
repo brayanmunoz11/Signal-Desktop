@@ -690,6 +690,13 @@
     "updated": "2018-09-15T00:38:04.183Z"
   },
   {
+    "rule": "thenify-multiArgs",
+    "path": "node_modules/default-browser-id/node_modules/pify/index.js",
+    "line": "\t\t\t\t} else if (opts.multiArgs) {",
+    "reasonCategory": "usageTrusted",
+    "updated": "2023-04-20T16:43:40.643Z"
+  },
+  {
     "rule": "DOM-outerHTML",
     "path": "node_modules/domutils/node_modules/dom-serializer/lib/esm/index.js",
     "line": " * Can be thought of as the equivalent of the `outerHTML` of the passed node(s).",
@@ -1074,6 +1081,20 @@
   {
     "rule": "DOM-innerHTML",
     "path": "node_modules/quill/dist/quill.core.js",
+    "line": "        this.container.innerHTML = html.replace(/\\>\\r?\\n +\\</g, '><'); // Remove spaces between tags",
+    "reasonCategory": "notExercisedByOurApp",
+    "updated": "2023-05-17T16:29:59.196Z"
+  },
+  {
+    "rule": "DOM-innerHTML",
+    "path": "node_modules/quill/dist/quill.core.js",
+    "line": "      this.container.innerHTML = '';",
+    "reasonCategory": "notExercisedByOurApp",
+    "updated": "2023-05-17T16:29:59.196Z"
+  },
+  {
+    "rule": "DOM-innerHTML",
+    "path": "node_modules/quill/dist/quill.core.js",
     "line": "    var html = this.container.innerHTML.trim();",
     "reasonCategory": "usageTrusted",
     "updated": "2020-10-13T18:36:57.012Z",
@@ -1083,22 +1104,6 @@
     "rule": "DOM-innerHTML",
     "path": "node_modules/quill/dist/quill.core.js",
     "line": "    this.container.innerHTML = '';",
-    "reasonCategory": "usageTrusted",
-    "updated": "2020-10-13T18:36:57.012Z",
-    "reasonDetail": "necessary for quill"
-  },
-  {
-    "rule": "DOM-innerHTML",
-    "path": "node_modules/quill/dist/quill.core.js",
-    "line": "        this.container.innerHTML = html.replace(/\\>\\r?\\n +\\</g, '><'); // Remove spaces between tags",
-    "reasonCategory": "usageTrusted",
-    "updated": "2020-10-13T18:36:57.012Z",
-    "reasonDetail": "necessary for quill"
-  },
-  {
-    "rule": "DOM-innerHTML",
-    "path": "node_modules/quill/dist/quill.core.js",
-    "line": "        this.container.innerHTML = '';",
     "reasonCategory": "usageTrusted",
     "updated": "2020-10-13T18:36:57.012Z",
     "reasonDetail": "necessary for quill"
@@ -1122,15 +1127,28 @@
   {
     "rule": "DOM-innerHTML",
     "path": "node_modules/quill/dist/quill.js",
-    "line": "    var html = this.container.innerHTML.trim();",
-    "reasonCategory": "usageTrusted",
-    "updated": "2020-10-13T18:36:57.012Z",
-    "reasonDetail": "necessary for quill"
+    "line": "        // this.container.innerHTML = html.replace(/\\>\\r?\\n +\\</g, '><'); // Remove spaces between tags",
+    "reasonCategory": "falseMatch",
+    "updated": "2023-05-17T01:41:49.734Z"
   },
   {
     "rule": "DOM-innerHTML",
     "path": "node_modules/quill/dist/quill.js",
-    "line": "    this.container.innerHTML = '';",
+    "line": "      //  this.container.innerHTML = '';",
+    "reasonCategory": "falseMatch",
+    "updated": "2023-05-17T01:41:49.734Z"
+  },
+  {
+    "rule": "DOM-innerHTML",
+    "path": "node_modules/quill/dist/quill.js",
+    "line": "      // this.container.innerHTML = '';",
+    "reasonCategory": "falseMatch",
+    "updated": "2023-05-17T01:41:49.734Z"
+  },
+  {
+    "rule": "DOM-innerHTML",
+    "path": "node_modules/quill/dist/quill.js",
+    "line": "    var html = this.container.innerHTML.trim();",
     "reasonCategory": "usageTrusted",
     "updated": "2020-10-13T18:36:57.012Z",
     "reasonDetail": "necessary for quill"
@@ -1170,14 +1188,6 @@
   {
     "rule": "DOM-innerHTML",
     "path": "node_modules/quill/dist/quill.js",
-    "line": "        this.container.innerHTML = html.replace(/\\>\\r?\\n +\\</g, '><'); // Remove spaces between tags",
-    "reasonCategory": "usageTrusted",
-    "updated": "2020-10-13T18:36:57.012Z",
-    "reasonDetail": "necessary for quill"
-  },
-  {
-    "rule": "DOM-innerHTML",
-    "path": "node_modules/quill/dist/quill.js",
     "line": "        this.container.innerHTML = '';",
     "reasonCategory": "usageTrusted",
     "updated": "2020-10-13T18:36:57.012Z",
@@ -1187,14 +1197,6 @@
     "rule": "DOM-innerHTML",
     "path": "node_modules/quill/dist/quill.js",
     "line": "      debug.log('convert', this.container.innerHTML, delta);",
-    "reasonCategory": "usageTrusted",
-    "updated": "2020-10-13T18:36:57.012Z",
-    "reasonDetail": "necessary for quill"
-  },
-  {
-    "rule": "DOM-innerHTML",
-    "path": "node_modules/quill/dist/quill.js",
-    "line": "      this.container.innerHTML = '';",
     "reasonCategory": "usageTrusted",
     "updated": "2020-10-13T18:36:57.012Z",
     "reasonDetail": "necessary for quill"
@@ -2186,6 +2188,13 @@
   },
   {
     "rule": "React-useRef",
+    "path": "ts/components/Preferences.tsx",
+    "line": "  const settingsPaneRef = useRef<HTMLDivElement | null>(null);",
+    "reasonCategory": "usageTrusted",
+    "updated": "2023-04-21T02:12:22.352Z"
+  },
+  {
+    "rule": "React-useRef",
     "path": "ts/components/ProfileEditor.tsx",
     "line": "  const focusInputRef = useRef<HTMLInputElement | null>(null);",
     "reasonCategory": "usageTrusted",
@@ -2352,6 +2361,13 @@
     "updated": "2021-07-30T16:57:33.618Z"
   },
   {
+    "rule": "React-useRef",
+    "path": "ts/components/conversation/InlineNotificationWrapper.tsx",
+    "line": "  const focusRef = useRef<HTMLDivElement>(null);",
+    "reasonCategory": "usageTrusted",
+    "updated": "2023-04-12T15:51:28.066Z"
+  },
+  {
     "rule": "React-createRef",
     "path": "ts/components/conversation/Message.tsx",
     "line": "    React.createRef();",
@@ -2374,6 +2390,20 @@
     "reasonCategory": "usageTrusted",
     "updated": "2021-03-05T19:57:01.431Z",
     "reasonDetail": "Used for propagating click from the Message to MessageAudio's button"
+  },
+  {
+    "rule": "React-useRef",
+    "path": "ts/components/conversation/MessageDetail.tsx",
+    "line": "  const focusRef = useRef<HTMLDivElement>(null);",
+    "reasonCategory": "usageTrusted",
+    "updated": "2023-04-12T15:51:28.066Z"
+  },
+  {
+    "rule": "React-useRef",
+    "path": "ts/components/conversation/MessageDetail.tsx",
+    "line": "  const messageContainerRef = useRef<HTMLDivElement>(null);",
+    "reasonCategory": "usageTrusted",
+    "updated": "2023-04-12T15:51:28.066Z"
   },
   {
     "rule": "React-useRef",
@@ -2507,12 +2537,20 @@
     "updated": "2021-10-22T00:52:39.251Z"
   },
   {
-    "rule": "DOM-innerHTML",
-    "path": "ts/quill/signal-clipboard/index.ts",
-    "line": "  return div.innerHTML;",
+    "rule": "React-useRef",
+    "path": "ts/quill/formatting/menu.tsx",
+    "line": "  const buttonRef = React.useRef<HTMLButtonElement | null>(null);",
     "reasonCategory": "usageTrusted",
-    "updated": "2020-11-06T17:43:07.381Z",
-    "reasonDetail": "used for figuring out clipboard contents"
+    "updated": "2023-04-22T00:07:56.294Z",
+    "reasonDetail": "Popper needs to reference the button"
+  },
+  {
+    "rule": "React-useRef",
+    "path": "ts/quill/formatting/menu.tsx",
+    "line": "  const timerRef = React.useRef<NodeJS.Timeout | undefined>();",
+    "reasonCategory": "usageTrusted",
+    "updated": "2023-04-22T00:07:56.294Z",
+    "reasonDetail": "We need a persistent timer to track long-hovers"
   },
   {
     "rule": "React-useRef",
@@ -2525,32 +2563,8 @@
   {
     "rule": "DOM-innerHTML",
     "path": "ts/windows/loading/start.ts",
-    "line": "  message.innerHTML = window.SignalContext.i18n('icu:optimizingApplication');",
+    "line": "  message.innerHTML = window.i18n('icu:optimizingApplication');",
     "reasonCategory": "usageTrusted",
     "updated": "2021-09-17T21:02:59.414Z"
-  },
-  {
-    "rule": "React-useRef",
-    "path": "ts/components/conversation/InlineNotificationWrapper.tsx",
-    "line": "  const focusRef = useRef<HTMLDivElement>(null);",
-    "reasonCategory": "falseMatch|testCode|exampleCode|otherUtilityCode|regexMatchedSafeCode|notExercisedByOurApp|ruleNeeded|usageTrusted",
-    "updated": "2023-04-12T15:51:28.066Z",
-    "reasonDetail": "<optional>"
-  },
-  {
-    "rule": "React-useRef",
-    "path": "ts/components/conversation/MessageDetail.tsx",
-    "line": "  const focusRef = useRef<HTMLDivElement>(null);",
-    "reasonCategory": "falseMatch|testCode|exampleCode|otherUtilityCode|regexMatchedSafeCode|notExercisedByOurApp|ruleNeeded|usageTrusted",
-    "updated": "2023-04-12T15:51:28.066Z",
-    "reasonDetail": "<optional>"
-  },
-  {
-    "rule": "React-useRef",
-    "path": "ts/components/conversation/MessageDetail.tsx",
-    "line": "  const messageContainerRef = useRef<HTMLDivElement>(null);",
-    "reasonCategory": "falseMatch|testCode|exampleCode|otherUtilityCode|regexMatchedSafeCode|notExercisedByOurApp|ruleNeeded|usageTrusted",
-    "updated": "2023-04-12T15:51:28.066Z",
-    "reasonDetail": "<optional>"
   }
 ]

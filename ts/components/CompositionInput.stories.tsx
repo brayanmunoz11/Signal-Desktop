@@ -28,19 +28,25 @@ const useProps = (overrideProps: Partial<Props> = {}): Props => ({
   clearQuotedMessage: action('clearQuotedMessage'),
   getPreferredBadge: () => undefined,
   getQuotedMessage: action('getQuotedMessage'),
-  isFormattingSpoilersEnabled:
-    overrideProps.isFormattingSpoilersEnabled === false
-      ? overrideProps.isFormattingSpoilersEnabled
+  isFormattingFlagEnabled:
+    overrideProps.isFormattingFlagEnabled === false
+      ? overrideProps.isFormattingFlagEnabled
+      : true,
+  isFormattingSpoilersFlagEnabled:
+    overrideProps.isFormattingSpoilersFlagEnabled === false
+      ? overrideProps.isFormattingSpoilersFlagEnabled
       : true,
   isFormattingEnabled:
     overrideProps.isFormattingEnabled === false
       ? overrideProps.isFormattingEnabled
       : true,
   large: boolean('large', overrideProps.large || false),
+  onCloseLinkPreview: action('onCloseLinkPreview'),
   onEditorStateChange: action('onEditorStateChange'),
   onPickEmoji: action('onPickEmoji'),
   onSubmit: action('onSubmit'),
   onTextTooLong: action('onTextTooLong'),
+  platform: 'darwin',
   sendCounter: 0,
   sortedGroupMembers: overrideProps.sortedGroupMembers || [],
   skinTone: select(
@@ -141,12 +147,18 @@ export function Mentions(): JSX.Element {
   return <CompositionInput {...props} />;
 }
 
-export function NoFormatting(): JSX.Element {
+export function NoFormattingMenu(): JSX.Element {
   return <CompositionInput {...useProps({ isFormattingEnabled: false })} />;
 }
 
-export function NoSpoilerFormatting(): JSX.Element {
+export function NoFormattingFlag(): JSX.Element {
+  return <CompositionInput {...useProps({ isFormattingFlagEnabled: false })} />;
+}
+
+export function NoSpoilerFormattingFlag(): JSX.Element {
   return (
-    <CompositionInput {...useProps({ isFormattingSpoilersEnabled: false })} />
+    <CompositionInput
+      {...useProps({ isFormattingSpoilersFlagEnabled: false })}
+    />
   );
 }

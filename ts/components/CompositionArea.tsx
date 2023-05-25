@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { get } from 'lodash';
 import classNames from 'classnames';
+import type { ReadonlyDeep } from 'type-fest';
+
 import type { DraftBodyRanges } from '../types/BodyRange';
 import type { LocalizerType, ThemeType } from '../types/Util';
 import type { ErrorDialogAudioRecorderType } from '../types/AudioRecorder';
@@ -52,6 +53,7 @@ import { Quote } from './conversation/Quote';
 import { countStickers } from './stickers/lib';
 import {
   useAttachFileShortcut,
+  useEditLastMessageSent,
   useKeyboardShortcuts,
 } from '../hooks/useKeyboardShortcuts';
 import { MediaEditor } from './MediaEditor';
@@ -64,6 +66,7 @@ import { useEscapeHandling } from '../hooks/useEscapeHandling';
 import type { SmartCompositionRecordingProps } from '../state/smart/CompositionRecording';
 import SelectModeActions from './conversation/SelectModeActions';
 import type { ShowToastAction } from '../state/ducks/toast';
+import type { DraftEditMessageType } from '../model-types.d';
 
 export type OwnProps = Readonly<{
   acceptedMessageRequest?: boolean;
@@ -82,6 +85,8 @@ export type OwnProps = Readonly<{
     onRecordingComplete: (rec: InMemoryAttachmentDraftType) => unknown
   ) => unknown;
   conversationId: string;
+  discardEditMessage: (id: string) => unknown;
+  draftEditMessage?: DraftEditMessageType;
   uuid?: string;
   draftAttachments: ReadonlyArray<AttachmentDraftType>;
   errorDialogAudioRecorderType?: ErrorDialogAudioRecorderType;
@@ -94,12 +99,15 @@ export type OwnProps = Readonly<{
   isDisabled: boolean;
   isFetchingUUID?: boolean;
   isFormattingEnabled: boolean;
-  isFormattingSpoilersEnabled: boolean;
+  isFormattingFlagEnabled: boolean;
+  isFormattingSpoilersFlagEnabled: boolean;
   isGroupV1AndDisabled?: boolean;
   isMissingMandatoryProfileSharing?: boolean;
   isSignalConversation?: boolean;
+  lastEditableMessageId?: string;
   recordingState: RecordingState;
   messageCompositionId: string;
+  shouldHidePopovers?: boolean;
   isSMSOnly?: boolean;
   left?: boolean;
   linkPreviewLoading: boolean;
@@ -107,6 +115,7 @@ export type OwnProps = Readonly<{
   messageRequestsEnabled?: boolean;
   onClearAttachments(conversationId: string): unknown;
   onCloseLinkPreview(conversationId: string): unknown;
+  platform: string;
   showToast: ShowToastAction;
   processAttachments: (options: {
     conversationId: string;
@@ -116,6 +125,16 @@ export type OwnProps = Readonly<{
   sendStickerMessage(
     id: string,
     opts: { packId: string; stickerId: number }
+  ): unknown;
+  sendEditedMessage(
+    conversationId: string,
+    options: {
+      bodyRanges?: DraftBodyRanges;
+      message?: string;
+      quoteAuthorUuid?: string;
+      quoteSentAt?: number;
+      targetMessageId: string;
+    }
   ): unknown;
   sendMultiMediaMessage(
     conversationId: string,
@@ -128,13 +147,19 @@ export type OwnProps = Readonly<{
     }
   ): unknown;
   quotedMessageId?: string;
-  quotedMessageProps?: Omit<
-    QuoteProps,
-    'i18n' | 'onClick' | 'onClose' | 'withContentAbove'
+  quotedMessageProps?: ReadonlyDeep<
+    Omit<
+      QuoteProps,
+      'i18n' | 'onClick' | 'onClose' | 'withContentAbove' | 'isCompose'
+    >
   >;
+  quotedMessageAuthorUuid?: string;
+  quotedMessageSentAt?: number;
+
   removeAttachment: (conversationId: string, filePath: string) => unknown;
   scrollToMessage: (conversationId: string, messageId: string) => unknown;
   setComposerFocus: (conversationId: string) => unknown;
+  setMessageToEdit(conversationId: string, messageId: string): unknown;
   setQuoteByMessageId(
     conversationId: string,
     messageId: string | undefined
@@ -196,19 +221,26 @@ export function CompositionArea({
   // Base props
   addAttachment,
   conversationId,
+  discardEditMessage,
+  draftEditMessage,
   focusCounter,
   i18n,
   imageToBlurHash,
   isDisabled,
   isSignalConversation,
+  lastEditableMessageId,
   messageCompositionId,
-  showToast,
   pushPanelForConversation,
+  platform,
   processAttachments,
   removeAttachment,
+  sendEditedMessage,
   sendMultiMediaMessage,
   setComposerFocus,
+  setMessageToEdit,
   setQuoteByMessageId,
+  shouldHidePopovers,
+  showToast,
   theme,
 
   // AttachmentList
@@ -224,6 +256,8 @@ export function CompositionArea({
   // Quote
   quotedMessageId,
   quotedMessageProps,
+  quotedMessageAuthorUuid,
+  quotedMessageSentAt,
   scrollToMessage,
   // MediaQualitySelector
   setMediaQualitySetting,
@@ -234,8 +268,9 @@ export function CompositionArea({
   draftText,
   getPreferredBadge,
   getQuotedMessage,
-  isFormattingSpoilersEnabled,
   isFormattingEnabled,
+  isFormattingFlagEnabled,
+  isFormattingSpoilersFlagEnabled,
   onEditorStateChange,
   onTextTooLong,
   sendCounter,
@@ -308,18 +343,42 @@ export function CompositionArea({
     }
   }, [inputApiRef, setLarge]);
 
+  const draftEditMessageBody = draftEditMessage?.body;
+  const editedMessageId = draftEditMessage?.targetMessageId;
+
   const handleSubmit = useCallback(
     (message: string, bodyRanges: DraftBodyRanges, timestamp: number) => {
       emojiButtonRef.current?.close();
-      sendMultiMediaMessage(conversationId, {
-        draftAttachments,
-        bodyRanges,
-        message,
-        timestamp,
-      });
+
+      if (editedMessageId) {
+        sendEditedMessage(conversationId, {
+          bodyRanges,
+          message,
+          // sent timestamp for the quote
+          quoteSentAt: quotedMessageSentAt,
+          quoteAuthorUuid: quotedMessageAuthorUuid,
+          targetMessageId: editedMessageId,
+        });
+      } else {
+        sendMultiMediaMessage(conversationId, {
+          draftAttachments,
+          bodyRanges,
+          message,
+          timestamp,
+        });
+      }
       setLarge(false);
     },
-    [conversationId, draftAttachments, sendMultiMediaMessage, setLarge]
+    [
+      conversationId,
+      draftAttachments,
+      editedMessageId,
+      quotedMessageSentAt,
+      quotedMessageAuthorUuid,
+      sendEditedMessage,
+      sendMultiMediaMessage,
+      setLarge,
+    ]
   );
 
   const launchAttachmentPicker = useCallback(() => {
@@ -340,8 +399,26 @@ export function CompositionArea({
     setAttachmentToEdit(attachment);
   }
 
+  const isComposerEmpty =
+    !draftAttachments.length && !draftText && !draftEditMessage;
+
+  const maybeEditMessage = useCallback(() => {
+    if (!isComposerEmpty || !lastEditableMessageId) {
+      return false;
+    }
+
+    setMessageToEdit(conversationId, lastEditableMessageId);
+    return true;
+  }, [
+    conversationId,
+    isComposerEmpty,
+    lastEditableMessageId,
+    setMessageToEdit,
+  ]);
+
   const attachFileShortcut = useAttachFileShortcut(launchAttachmentPicker);
-  useKeyboardShortcuts(attachFileShortcut);
+  const editLastMessageSent = useEditLastMessageSent(maybeEditMessage);
+  useKeyboardShortcuts(attachFileShortcut, editLastMessageSent);
 
   // Focus input on first mount
   const previousFocusCounter = usePrevious<number | undefined>(
@@ -414,11 +491,34 @@ export function CompositionArea({
     inputApiRef.current?.setContents(draftText, draftBodyRanges, true);
   }, [conversationId, draftBodyRanges, draftText, previousConversationId]);
 
+  // We want to reset the state of Quill only if:
+  //
+  // - Our other device edits the message (edit history length would change)
+  // - User begins editing another message.
+  const editHistoryLength = draftEditMessage?.editHistoryLength;
+  const hasEditHistoryChanged =
+    usePrevious(editHistoryLength, editHistoryLength) !== editHistoryLength;
+  const hasEditedMessageChanged =
+    usePrevious(editedMessageId, editedMessageId) !== editedMessageId;
+
+  const hasEditDraftChanged = hasEditHistoryChanged || hasEditedMessageChanged;
+  useEffect(() => {
+    if (!hasEditDraftChanged) {
+      return;
+    }
+
+    inputApiRef.current?.setContents(
+      draftEditMessageBody ?? '',
+      draftBodyRanges,
+      true
+    );
+  }, [draftBodyRanges, draftEditMessageBody, hasEditDraftChanged]);
+
   const handleToggleLarge = useCallback(() => {
     setLarge(l => !l);
   }, [setLarge]);
 
-  const shouldShowMicrophone = !large && !draftAttachments.length && !draftText;
+  const shouldShowMicrophone = !large && isComposerEmpty;
 
   const showMediaQualitySelector = draftAttachments.some(isImageAttachment);
 
@@ -460,9 +560,29 @@ export function CompositionArea({
     </div>
   ) : null;
 
+  const editMessageFragment = draftEditMessage ? (
+    <>
+      {large && <div className="CompositionArea__placeholder" />}
+      <div className="CompositionArea__button-cell">
+        <button
+          aria-label={i18n('icu:CompositionArea__edit-action--discard')}
+          className="CompositionArea__edit-button CompositionArea__edit-button--discard"
+          onClick={() => discardEditMessage(conversationId)}
+          type="button"
+        />
+        <button
+          aria-label={i18n('icu:CompositionArea__edit-action--send')}
+          className="CompositionArea__edit-button CompositionArea__edit-button--accept"
+          onClick={() => inputApiRef.current?.submit()}
+          type="button"
+        />
+      </div>
+    </>
+  ) : null;
+
   const isRecording = recordingState === RecordingState.Recording;
   const attButton =
-    linkPreviewResult || isRecording ? undefined : (
+    draftEditMessage || linkPreviewResult || isRecording ? undefined : (
       <div className="CompositionArea__button-cell">
         <button
           type="button"
@@ -473,7 +593,7 @@ export function CompositionArea({
       </div>
     );
 
-  const sendButtonFragment = (
+  const sendButtonFragment = !draftEditMessage ? (
     <>
       <div className="CompositionArea__placeholder" />
       <div className="CompositionArea__button-cell">
@@ -485,35 +605,36 @@ export function CompositionArea({
         />
       </div>
     </>
-  );
+  ) : null;
 
   const stickerButtonPlacement = large ? 'top-start' : 'top-end';
-  const stickerButtonFragment = withStickers ? (
-    <div className="CompositionArea__button-cell">
-      <StickerButton
-        i18n={i18n}
-        knownPacks={knownPacks}
-        receivedPacks={receivedPacks}
-        installedPack={installedPack}
-        installedPacks={installedPacks}
-        blessedPacks={blessedPacks}
-        recentStickers={recentStickers}
-        clearInstalledStickerPack={clearInstalledStickerPack}
-        onClickAddPack={() =>
-          pushPanelForConversation({
-            type: PanelType.StickerManager,
-          })
-        }
-        onPickSticker={(packId, stickerId) =>
-          sendStickerMessage(conversationId, { packId, stickerId })
-        }
-        clearShowIntroduction={clearShowIntroduction}
-        showPickerHint={showPickerHint}
-        clearShowPickerHint={clearShowPickerHint}
-        position={stickerButtonPlacement}
-      />
-    </div>
-  ) : null;
+  const stickerButtonFragment =
+    !draftEditMessage && withStickers ? (
+      <div className="CompositionArea__button-cell">
+        <StickerButton
+          i18n={i18n}
+          knownPacks={knownPacks}
+          receivedPacks={receivedPacks}
+          installedPack={installedPack}
+          installedPacks={installedPacks}
+          blessedPacks={blessedPacks}
+          recentStickers={recentStickers}
+          clearInstalledStickerPack={clearInstalledStickerPack}
+          onClickAddPack={() =>
+            pushPanelForConversation({
+              type: PanelType.StickerManager,
+            })
+          }
+          onPickSticker={(packId, stickerId) =>
+            sendStickerMessage(conversationId, { packId, stickerId })
+          }
+          clearShowIntroduction={clearShowIntroduction}
+          showPickerHint={showPickerHint}
+          clearShowPickerHint={clearShowPickerHint}
+          position={stickerButtonPlacement}
+        />
+      </div>
+    ) : null;
 
   // Listen for cmd/ctrl-shift-x to toggle large composition mode
   useEffect(() => {
@@ -522,8 +643,8 @@ export function CompositionArea({
       const key = KeyboardLayout.lookup(e);
       // When using the ctrl key, `key` is `'K'`. When using the cmd key, `key` is `'k'`
       const targetKey = key === 'k' || key === 'K';
-      const commandKey = get(window, 'platform') === 'darwin' && metaKey;
-      const controlKey = get(window, 'platform') !== 'darwin' && ctrlKey;
+      const commandKey = platform === 'darwin' && metaKey;
+      const controlKey = platform !== 'darwin' && ctrlKey;
       const commandOrCtrl = commandKey || controlKey;
 
       // cmd/ctrl-shift-k
@@ -538,7 +659,7 @@ export function CompositionArea({
     return () => {
       document.removeEventListener('keydown', handler);
     };
-  }, [setLarge]);
+  }, [platform, setLarge]);
 
   const handleRecordingBeforeSend = useCallback(() => {
     emojiButtonRef.current?.close();
@@ -548,7 +669,16 @@ export function CompositionArea({
     if (quotedMessageId) {
       setQuoteByMessageId(conversationId, undefined);
     }
-  }, [conversationId, quotedMessageId, setQuoteByMessageId]);
+    if (draftEditMessage) {
+      discardEditMessage(conversationId);
+    }
+  }, [
+    conversationId,
+    discardEditMessage,
+    draftEditMessage,
+    quotedMessageId,
+    setQuoteByMessageId,
+  ]);
 
   useEscapeHandling(clearQuote);
 
@@ -752,13 +882,17 @@ export function CompositionArea({
           'CompositionArea__row--column'
         )}
       >
-        {quotedMessageId && quotedMessageProps && (
+        {quotedMessageProps && (
           <div className="quote-wrapper">
             <Quote
               isCompose
               {...quotedMessageProps}
               i18n={i18n}
-              onClick={() => scrollToMessage(conversationId, quotedMessageId)}
+              onClick={
+                quotedMessageId
+                  ? () => scrollToMessage(conversationId, quotedMessageId)
+                  : undefined
+              }
               onClose={() => {
                 setQuoteByMessageId(conversationId, undefined);
               }}
@@ -801,13 +935,15 @@ export function CompositionArea({
             conversationId={conversationId}
             disabled={isDisabled}
             draftBodyRanges={draftBodyRanges}
+            draftEditMessage={draftEditMessage}
             draftText={draftText}
             getPreferredBadge={getPreferredBadge}
             getQuotedMessage={getQuotedMessage}
             i18n={i18n}
             inputApi={inputApiRef}
-            isFormattingSpoilersEnabled={isFormattingSpoilersEnabled}
             isFormattingEnabled={isFormattingEnabled}
+            isFormattingFlagEnabled={isFormattingFlagEnabled}
+            isFormattingSpoilersFlagEnabled={isFormattingSpoilersFlagEnabled}
             large={large}
             linkPreviewLoading={linkPreviewLoading}
             linkPreviewResult={linkPreviewResult}
@@ -817,7 +953,9 @@ export function CompositionArea({
             onPickEmoji={onPickEmoji}
             onSubmit={handleSubmit}
             onTextTooLong={onTextTooLong}
+            platform={platform}
             sendCounter={sendCounter}
+            shouldHidePopovers={shouldHidePopovers}
             skinTone={skinTone}
             sortedGroupMembers={sortedGroupMembers}
             theme={theme}
@@ -827,6 +965,7 @@ export function CompositionArea({
           <>
             {stickerButtonFragment}
             {!dirty ? micButtonFragment : null}
+            {editMessageFragment}
             {attButton}
           </>
         ) : null}
@@ -842,6 +981,7 @@ export function CompositionArea({
           {stickerButtonFragment}
           {attButton}
           {!dirty ? micButtonFragment : null}
+          {editMessageFragment}
           {dirty || !shouldShowMicrophone ? sendButtonFragment : null}
         </div>
       ) : null}

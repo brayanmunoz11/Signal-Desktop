@@ -88,6 +88,7 @@ import type {
   ErrorEvent,
   FetchLatestEvent,
   GroupEvent,
+  InvalidPlaintextEvent,
   KeysEvent,
   MessageEvent,
   MessageEventData,
@@ -140,7 +141,11 @@ import * as Conversation from './types/Conversation';
 import * as Stickers from './types/Stickers';
 import * as Errors from './types/errors';
 import { SignalService as Proto } from './protobuf';
-import { onRetryRequest, onDecryptionError } from './util/handleRetry';
+import {
+  onRetryRequest,
+  onDecryptionError,
+  onInvalidPlaintextMessage,
+} from './util/handleRetry';
 import { themeChanged } from './shims/themeChanged';
 import { createIPCEvents } from './util/createIPCEvents';
 import { RemoveAllConfiguration } from './types/RemoveAllConfiguration';
@@ -166,16 +171,13 @@ import type AccountManager from './textsecure/AccountManager';
 import { onStoryRecipientUpdate } from './util/onStoryRecipientUpdate';
 import { StoryViewModeType, StoryViewTargetType } from './types/Stories';
 import { downloadOnboardingStory } from './util/downloadOnboardingStory';
-import { clearConversationDraftAttachments } from './util/clearConversationDraftAttachments';
-import { removeLinkPreview } from './services/LinkPreview';
-import { PanelType } from './types/Panels';
-import { getQuotedMessageSelector } from './state/selectors/composer';
 import { flushAttachmentDownloadQueue } from './util/attachmentDownloadQueue';
 import { StartupQueue } from './util/StartupQueue';
 import { showConfirmationDialog } from './util/showConfirmationDialog';
 import { onCallEventSync } from './util/onCallEventSync';
 import { sleeper } from './util/sleeper';
-import { MINUTE } from './util/durations';
+import { DAY, HOUR, MINUTE } from './util/durations';
+import { copyDataMessageIntoMessage } from './util/copyDataMessageIntoMessage';
 import {
   flushMessageCounter,
   incrementMessageCounter,
@@ -185,9 +187,9 @@ import { RetryPlaceholders } from './util/retryPlaceholders';
 import { setBatchingStrategy } from './util/messageBatcher';
 import { parseRemoteClientExpiration } from './util/parseRemoteClientExpiration';
 import { makeLookup } from './util/makeLookup';
+import { addGlobalKeyboardShortcuts } from './services/addGlobalKeyboardShortcuts';
 
 export function isOverHourIntoPast(timestamp: number): boolean {
-  const HOUR = 1000 * 60 * 60;
   return isNumber(timestamp) && isOlderThan(timestamp, HOUR);
 }
 
@@ -390,6 +392,14 @@ export async function startApp(): Promise<void> {
       })
     );
     messageReceiver.addEventListener(
+      'invalid-plaintext',
+      queuedEventListener((event: InvalidPlaintextEvent): void => {
+        drop(
+          onDecryptionErrorQueue.add(() => onInvalidPlaintextMessage(event))
+        );
+      })
+    );
+    messageReceiver.addEventListener(
       'retry-request',
       queuedEventListener((event: RetryRequestEvent): void => {
         drop(onRetryRequestQueue.add(() => onRetryRequest(event)));
@@ -542,19 +552,6 @@ export async function startApp(): Promise<void> {
 
   startInteractionMode();
 
-  // Load these images now to ensure that they don't flicker on first use
-  window.preloadedImages = [];
-  function preload(list: ReadonlyArray<string>) {
-    for (let index = 0, max = list.length; index < max; index += 1) {
-      const image = new Image();
-      image.src = `./images/${list[index]}`;
-      window.preloadedImages.push(image);
-    }
-  }
-
-  const builtInImages = await window.IPC.getBuiltInImages();
-  preload(builtInImages);
-
   // We add this to window here because the default Node context is erased at the end
   //   of preload.js processing
   window.setImmediate = window.nodeSetImmediate;
@@ -578,6 +575,11 @@ export async function startApp(): Promise<void> {
   document.documentElement.setAttribute(
     'lang',
     window.getResolvedMessagesLocale().split(/[-_]/)[0]
+  );
+
+  document.documentElement.setAttribute(
+    'dir',
+    window.getResolvedMessagesLocaleDirection()
   );
 
   KeyChangeListener.init(window.textsecure.storage.protocol);
@@ -938,12 +940,6 @@ export async function startApp(): Promise<void> {
       void window.Signal.Data.ensureFilePermissions();
     }
 
-    try {
-      await window.Signal.Data.startInRendererProcess();
-    } catch (err) {
-      log.error('SQL failed to initialize', Errors.toLogFormat(err));
-    }
-
     setAppLoadingScreenMessage(window.i18n('icu:loading'), window.i18n);
 
     let isMigrationWithIndexComplete = false;
@@ -1001,27 +997,13 @@ export async function startApp(): Promise<void> {
 
     void window.Signal.RemoteConfig.initRemoteConfig(server);
 
-    let retryReceiptLifespan: number | undefined;
-    try {
-      retryReceiptLifespan = parseIntOrThrow(
-        window.Signal.RemoteConfig.getValue('desktop.retryReceiptLifespan'),
-        'retryReceiptLifeSpan'
-      );
-    } catch (error) {
-      log.warn(
-        'Failed to parse integer out of desktop.retryReceiptLifespan feature flag'
-      );
-    }
-
     const retryPlaceholders = new RetryPlaceholders({
-      retryReceiptLifespan,
+      retryReceiptLifespan: HOUR,
     });
     window.Signal.Services.retryPlaceholders = retryPlaceholders;
 
     setInterval(async () => {
       const now = Date.now();
-      const HOUR = 1000 * 60 * 60;
-      const DAY = 24 * HOUR;
       let sentProtoMaxAge = 14 * DAY;
 
       try {
@@ -1326,502 +1308,7 @@ export async function startApp(): Promise<void> {
       window.reduxActions.user.userChanged({ menuOptions: options });
     });
 
-    document.addEventListener('keydown', event => {
-      const { ctrlKey, metaKey, shiftKey, altKey } = event;
-
-      const commandKey = window.platform === 'darwin' && metaKey;
-      const controlKey = window.platform !== 'darwin' && ctrlKey;
-      const commandOrCtrl = commandKey || controlKey;
-
-      const state = store.getState();
-      const selectedId = state.conversations.selectedConversationId;
-      const conversation = window.ConversationController.get(selectedId);
-
-      const key = KeyboardLayout.lookup(event);
-
-      // NAVIGATION
-
-      // Show keyboard shortcuts - handled by Electron-managed keyboard shortcuts
-      // However, on linux Ctrl+/ selects all text, so we prevent that
-      if (commandOrCtrl && !altKey && key === '/') {
-        window.Events.showKeyboardShortcuts();
-
-        event.stopPropagation();
-        event.preventDefault();
-
-        return;
-      }
-
-      // Navigate by section
-      if (commandOrCtrl && !shiftKey && (key === 't' || key === 'T')) {
-        window.enterKeyboardMode();
-        const focusedElement = document.activeElement;
-
-        const targets: Array<HTMLElement | null> = [
-          document.querySelector('.module-main-header .module-avatar-button'),
-          document.querySelector(
-            '.module-left-pane__header__contents__back-button'
-          ),
-          document.querySelector('.LeftPaneSearchInput__input'),
-          document.querySelector('.module-main-header__compose-icon'),
-          document.querySelector(
-            '.module-left-pane__compose-search-form__input'
-          ),
-          document.querySelector(
-            '.module-conversation-list__item--contact-or-conversation'
-          ),
-          document.querySelector('.module-search-results'),
-          document.querySelector('.CompositionArea .ql-editor'),
-        ];
-        const focusedIndex = targets.findIndex(target => {
-          if (!target || !focusedElement) {
-            return false;
-          }
-
-          if (target === focusedElement) {
-            return true;
-          }
-
-          if (target.contains(focusedElement)) {
-            return true;
-          }
-
-          return false;
-        });
-        const lastIndex = targets.length - 1;
-
-        let index;
-        if (focusedIndex < 0 || focusedIndex >= lastIndex) {
-          index = 0;
-        } else {
-          index = focusedIndex + 1;
-        }
-
-        while (!targets[index]) {
-          index += 1;
-          if (index > lastIndex) {
-            index = 0;
-          }
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        targets[index]!.focus();
-      }
-
-      // Cancel out of keyboard shortcut screen - has first precedence
-      const isShortcutGuideModalVisible = window.reduxStore
-        ? window.reduxStore.getState().globalModals.isShortcutGuideModalVisible
-        : false;
-      if (isShortcutGuideModalVisible && key === 'Escape') {
-        window.reduxActions.globalModals.closeShortcutGuideModal();
-        event.preventDefault();
-        event.stopPropagation();
-        return;
-      }
-
-      // Escape is heavily overloaded - here we avoid clashes with other Escape handlers
-      if (key === 'Escape') {
-        // Check origin - if within a react component which handles escape, don't handle.
-        //   Why? Because React's synthetic events can cause events to be handled twice.
-        const target = document.activeElement;
-
-        // We might want to use NamedNodeMap.getNamedItem('class')
-        /* eslint-disable @typescript-eslint/no-explicit-any */
-        if (
-          target &&
-          target.attributes &&
-          (target.attributes as any).class &&
-          (target.attributes as any).class.value
-        ) {
-          const className = (target.attributes as any).class.value;
-          /* eslint-enable @typescript-eslint/no-explicit-any */
-
-          // Search box wants to handle events internally
-          if (className.includes('LeftPaneSearchInput__input')) {
-            return;
-          }
-        }
-
-        // These add listeners to document, but we'll run first
-        const confirmationModal = document.querySelector(
-          '.module-confirmation-dialog__overlay'
-        );
-        if (confirmationModal) {
-          return;
-        }
-
-        const emojiPicker = document.querySelector('.module-emoji-picker');
-        if (emojiPicker) {
-          return;
-        }
-
-        const lightBox = document.querySelector('.Lightbox');
-        if (lightBox) {
-          return;
-        }
-
-        const stickerPicker = document.querySelector('.module-sticker-picker');
-        if (stickerPicker) {
-          return;
-        }
-
-        const stickerPreview = document.querySelector(
-          '.module-sticker-manager__preview-modal__overlay'
-        );
-        if (stickerPreview) {
-          return;
-        }
-
-        const reactionViewer = document.querySelector(
-          '.module-reaction-viewer'
-        );
-        if (reactionViewer) {
-          return;
-        }
-
-        const reactionPicker = document.querySelector('.module-ReactionPicker');
-        if (reactionPicker) {
-          return;
-        }
-
-        const contactModal = document.querySelector('.module-contact-modal');
-        if (contactModal) {
-          return;
-        }
-
-        const modalHost = document.querySelector('.module-modal-host__overlay');
-        if (modalHost) {
-          return;
-        }
-      }
-
-      // Send Escape to active conversation so it can close panels
-      if (conversation && key === 'Escape') {
-        window.reduxActions.conversations.popPanelForConversation();
-        event.preventDefault();
-        event.stopPropagation();
-        return;
-      }
-
-      // Preferences - handled by Electron-managed keyboard shortcuts
-
-      // Open the top-right menu for current conversation
-      if (
-        conversation &&
-        commandOrCtrl &&
-        shiftKey &&
-        (key === 'l' || key === 'L')
-      ) {
-        const button = document.querySelector(
-          '.module-ConversationHeader__button--more'
-        );
-        if (!button) {
-          return;
-        }
-
-        // Because the menu is shown at a location based on the initiating click, we need
-        //   to fake up a mouse event to get the menu to show somewhere other than (0,0).
-        const { x, y, width, height } = button.getBoundingClientRect();
-        const mouseEvent = document.createEvent('MouseEvents');
-        // Types do not match signature
-        /* eslint-disable @typescript-eslint/no-explicit-any */
-        mouseEvent.initMouseEvent(
-          'click',
-          true, // bubbles
-          false, // cancelable
-          null as any, // view
-          null as any, // detail
-          0, // screenX,
-          0, // screenY,
-          x + width / 2,
-          y + height / 2,
-          false, // ctrlKey,
-          false, // altKey,
-          false, // shiftKey,
-          false, // metaKey,
-          false as any, // button,
-          document.body
-        );
-        /* eslint-enable @typescript-eslint/no-explicit-any */
-
-        button.dispatchEvent(mouseEvent);
-
-        event.preventDefault();
-        event.stopPropagation();
-        return;
-      }
-
-      // Focus composer field
-      if (
-        conversation &&
-        commandOrCtrl &&
-        shiftKey &&
-        (key === 't' || key === 'T')
-      ) {
-        window.reduxActions.composer.setComposerFocus(conversation.id);
-        event.preventDefault();
-        event.stopPropagation();
-        return;
-      }
-
-      // Open all media
-      if (
-        conversation &&
-        commandOrCtrl &&
-        shiftKey &&
-        (key === 'm' || key === 'M')
-      ) {
-        window.reduxActions.conversations.pushPanelForConversation({
-          type: PanelType.AllMedia,
-        });
-        event.preventDefault();
-        event.stopPropagation();
-        return;
-      }
-
-      // Open emoji picker - handled by component
-
-      // Open sticker picker - handled by component
-
-      // Begin recording voice note - handled by component
-
-      // Archive or unarchive conversation
-      if (
-        conversation &&
-        !conversation.get('isArchived') &&
-        commandOrCtrl &&
-        shiftKey &&
-        (key === 'a' || key === 'A')
-      ) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        window.reduxActions.conversations.onArchive(conversation.id);
-
-        // It's very likely that the act of archiving a conversation will set focus to
-        //   'none,' or the top-level body element. This resets it to the left pane.
-        if (document.activeElement === document.body) {
-          const leftPaneEl: HTMLElement | null = document.querySelector(
-            '.module-left-pane__list'
-          );
-          if (leftPaneEl) {
-            leftPaneEl.focus();
-          }
-        }
-
-        return;
-      }
-      if (
-        conversation &&
-        conversation.get('isArchived') &&
-        commandOrCtrl &&
-        shiftKey &&
-        (key === 'u' || key === 'U')
-      ) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        window.reduxActions.conversations.onMoveToInbox(conversation.id);
-
-        return;
-      }
-
-      // Scroll to bottom of list - handled by component
-
-      // Scroll to top of list - handled by component
-
-      // Close conversation
-      if (
-        conversation &&
-        commandOrCtrl &&
-        shiftKey &&
-        (key === 'c' || key === 'C')
-      ) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        onConversationClosed(conversation.id, 'keyboard shortcut close');
-        window.reduxActions.conversations.showConversation({
-          conversationId: undefined,
-          messageId: undefined,
-        });
-
-        return;
-      }
-
-      // MESSAGES
-
-      // Show message details
-      if (
-        conversation &&
-        commandOrCtrl &&
-        !shiftKey &&
-        (key === 'd' || key === 'D')
-      ) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        const { targetedMessage } = state.conversations;
-        if (!targetedMessage) {
-          return;
-        }
-
-        window.reduxActions.conversations.pushPanelForConversation({
-          type: PanelType.MessageDetails,
-          args: {
-            messageId: targetedMessage,
-          },
-        });
-        return;
-      }
-
-      // Toggle reply to message
-      if (
-        conversation &&
-        commandOrCtrl &&
-        shiftKey &&
-        (key === 'r' || key === 'R')
-      ) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        const { targetedMessage } = state.conversations;
-
-        const quotedMessageSelector = getQuotedMessageSelector(state);
-        const quote = quotedMessageSelector(conversation.id);
-
-        window.reduxActions.composer.setQuoteByMessageId(
-          conversation.id,
-          quote ? undefined : targetedMessage
-        );
-
-        return;
-      }
-
-      // Save attachment
-      if (
-        conversation &&
-        commandOrCtrl &&
-        !shiftKey &&
-        (key === 's' || key === 'S')
-      ) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        const { targetedMessage } = state.conversations;
-
-        if (targetedMessage) {
-          window.reduxActions.conversations.saveAttachmentFromMessage(
-            targetedMessage
-          );
-          return;
-        }
-      }
-
-      if (
-        conversation &&
-        commandOrCtrl &&
-        shiftKey &&
-        (key === 'd' || key === 'D')
-      ) {
-        const { forwardMessagesProps } = state.globalModals;
-        const { targetedMessage, selectedMessageIds } = state.conversations;
-
-        const messageIds =
-          selectedMessageIds ??
-          (targetedMessage != null ? [targetedMessage] : null);
-
-        if (forwardMessagesProps == null && messageIds != null) {
-          event.preventDefault();
-          event.stopPropagation();
-
-          window.reduxActions.globalModals.toggleDeleteMessagesModal({
-            conversationId: conversation.id,
-            messageIds,
-            onDelete() {
-              if (selectedMessageIds != null) {
-                window.reduxActions.conversations.toggleSelectMode(false);
-              }
-            },
-          });
-
-          return;
-        }
-      }
-
-      if (
-        conversation &&
-        commandOrCtrl &&
-        shiftKey &&
-        (key === 's' || key === 'S')
-      ) {
-        const { hasConfirmationModal } = state.globalModals;
-        const { targetedMessage, selectedMessageIds } = state.conversations;
-
-        const messageIds =
-          selectedMessageIds ??
-          (targetedMessage != null ? [targetedMessage] : null);
-
-        if (!hasConfirmationModal && messageIds != null) {
-          event.preventDefault();
-          event.stopPropagation();
-
-          window.reduxActions.globalModals.toggleForwardMessagesModal(
-            messageIds,
-            () => {
-              if (selectedMessageIds != null) {
-                window.reduxActions.conversations.toggleSelectMode(false);
-              }
-            }
-          );
-
-          return;
-        }
-      }
-
-      // COMPOSER
-
-      // Create a newline in your message - handled by component
-
-      // Expand composer - handled by component
-
-      // Send in expanded composer - handled by component
-
-      // Attach file
-      // hooks/useKeyboardShorcuts useAttachFileShortcut
-
-      // Remove draft link preview
-      if (
-        conversation &&
-        commandOrCtrl &&
-        !shiftKey &&
-        (key === 'p' || key === 'P')
-      ) {
-        removeLinkPreview(conversation.id);
-
-        event.preventDefault();
-        event.stopPropagation();
-        return;
-      }
-
-      // Attach file
-      if (
-        conversation &&
-        commandOrCtrl &&
-        shiftKey &&
-        (key === 'p' || key === 'P')
-      ) {
-        void clearConversationDraftAttachments(
-          conversation.id,
-          conversation.get('draftAttachments')
-        );
-
-        event.preventDefault();
-        event.stopPropagation();
-        // Commented out because this is the last item
-        // return;
-      }
-    });
+    addGlobalKeyboardShortcuts();
   }
 
   window.Whisper.events.on('setupAsNewDevice', () => {
@@ -2584,9 +2071,6 @@ export async function startApp(): Promise<void> {
     // Start listeners here, after we get through our queue.
     RotateSignedPreKeyListener.init(window.Whisper.events, newVersion);
 
-    // Go back to main process before processing delayed actions
-    await window.Signal.Data.goBackToMainProcess();
-
     profileKeyResponseQueue.start();
     lightSessionResetQueue.start();
     onDecryptionErrorQueue.start();
@@ -2626,17 +2110,6 @@ export async function startApp(): Promise<void> {
       });
 
       void routineProfileRefresher.start();
-    }
-
-    // Make sure we have the PNI identity
-
-    const pni = storage.user.getCheckedUuid(UUIDKind.PNI);
-    const pniIdentity = await storage.protocol.getIdentityKeyPair(pni);
-    if (!pniIdentity) {
-      log.info('Requesting PNI identity sync');
-      await singleProtoJobQueue.add(
-        MessageSender.getRequestPniIdentitySyncMessage()
-      );
     }
   }
 
@@ -3123,9 +2596,9 @@ export async function startApp(): Promise<void> {
       });
 
       const editAttributes: EditAttributesType = {
-        dataMessage: data.message,
+        conversationId: message.attributes.conversationId,
         fromId: fromConversation.id,
-        message: message.attributes,
+        message: copyDataMessageIntoMessage(data.message, message.attributes),
         targetSentTimestamp: editedMessageTimestamp,
       };
 
@@ -3446,9 +2919,9 @@ export async function startApp(): Promise<void> {
       });
 
       const editAttributes: EditAttributesType = {
-        dataMessage: data.message,
+        conversationId: message.attributes.conversationId,
         fromId: window.ConversationController.getOurConversationIdOrThrow(),
-        message: message.attributes,
+        message: copyDataMessageIntoMessage(data.message, message.attributes),
         targetSentTimestamp: editedMessageTimestamp,
       };
 

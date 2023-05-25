@@ -81,6 +81,7 @@ export class SettingsChannel extends EventEmitter {
 
     this.installSetting('notificationSetting');
     this.installSetting('notificationDrawAttention');
+    this.installSetting('audioMessage');
     this.installSetting('audioNotification');
     this.installSetting('countMutedConversations');
 
@@ -112,7 +113,7 @@ export class SettingsChannel extends EventEmitter {
     this.installSetting('phoneNumberDiscoverabilitySetting');
     this.installSetting('phoneNumberSharingSetting');
 
-    installPermissionsHandler({ session, userConfig });
+    installPermissionsHandler({ session: session.defaultSession, userConfig });
 
     // These ones are different because its single source of truth is userConfig,
     // not IndexedDB
@@ -126,13 +127,19 @@ export class SettingsChannel extends EventEmitter {
       userConfig.set('mediaPermissions', value);
 
       // We reinstall permissions handler to ensure that a revoked permission takes effect
-      installPermissionsHandler({ session, userConfig });
+      installPermissionsHandler({
+        session: session.defaultSession,
+        userConfig,
+      });
     });
     ipc.handle('settings:set:mediaCameraPermissions', (_event, value) => {
       userConfig.set('mediaCameraPermissions', value);
 
       // We reinstall permissions handler to ensure that a revoked permission takes effect
-      installPermissionsHandler({ session, userConfig });
+      installPermissionsHandler({
+        session: session.defaultSession,
+        userConfig,
+      });
     });
 
     ipc.on('settings:response', (_event, seq, error, value) => {

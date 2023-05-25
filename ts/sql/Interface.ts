@@ -389,7 +389,7 @@ export type FTSOptimizationStateType = Readonly<{
 }>;
 
 export type EditedMessageType = Readonly<{
-  fromId: string;
+  conversationId: string;
   messageId: string;
   sentAt: number;
   readStatus: MessageType['readStatus'];
@@ -523,7 +523,7 @@ export type DataInterface = {
     storyId?: string;
   }) => Promise<GetUnreadByConversationAndMarkReadResultType>;
   getUnreadEditedMessagesAndMarkRead: (options: {
-    fromId: string;
+    conversationId: string;
     newestUnreadAt: number;
   }) => Promise<GetUnreadByConversationAndMarkReadResultType>;
   getUnreadReactionsAndMarkRead: (options: {
@@ -561,9 +561,6 @@ export type DataInterface = {
   _removeAllMessages: () => Promise<void>;
   getAllMessageIds: () => Promise<Array<string>>;
   getMessagesBySentAt: (sentAt: number) => Promise<Array<MessageType>>;
-  getMessagesIncludingEditedBySentAt: (
-    sentAt: number
-  ) => Promise<Array<MessageType>>;
   getExpiredMessages: () => Promise<Array<MessageType>>;
   getMessagesUnexpectedlyMissingExpirationStartTimestamp: () => Promise<
     Array<MessageType>
@@ -833,10 +830,6 @@ export type ServerInterface = DataInterface & {
     key: string;
     logger: LoggerType;
   }) => Promise<void>;
-  initializeRenderer: (options: {
-    configDir: string;
-    key: string;
-  }) => Promise<void>;
 
   getKnownMessageAttachments: (
     cursor?: MessageAttachmentsCursorType
@@ -916,11 +909,6 @@ export type ClientExclusiveInterface = {
   removeOtherData: () => Promise<void>;
   cleanupOrphanedAttachments: () => Promise<void>;
   ensureFilePermissions: () => Promise<void>;
-
-  // To decide whether to use IPC to use the database in the main process or
-  //   use the db already running in the renderer.
-  goBackToMainProcess: () => Promise<void>;
-  startInRendererProcess: (isTesting?: boolean) => Promise<void>;
 };
 
 export type ClientInterface = DataInterface & ClientExclusiveInterface;

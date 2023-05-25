@@ -7,6 +7,7 @@ import React, {
   useMemo,
   useRef,
   useState,
+  Fragment,
 } from 'react';
 import type { MeasuredComponentProps } from 'react-measure';
 import Measure from 'react-measure';
@@ -33,7 +34,6 @@ import {
   shouldNeverBeCalled,
   asyncShouldNeverBeCalled,
 } from '../util/shouldNeverBeCalled';
-import { Emojify } from './conversation/Emojify';
 import type { MessageForwardDraft } from '../util/maybeForwardMessages';
 import {
   isDraftEditable,
@@ -45,6 +45,7 @@ import { ToastType } from '../types/Toast';
 import type { ShowToastAction } from '../state/ducks/toast';
 import type { HydratedBodyRangesType } from '../types/BodyRange';
 import { BodyRange } from '../types/BodyRange';
+import { UserText } from './UserText';
 
 export type DataPropsType = {
   candidateConversations: ReadonlyArray<ConversationType>;
@@ -276,6 +277,7 @@ export function ForwardMessagesModal({
       )}
       <ModalHost
         modalName="ForwardMessageModal"
+        noMouseClose
         onEscape={handleBackOrClose}
         onClose={close}
         overlayStyles={overlayStyles}
@@ -315,6 +317,9 @@ export function ForwardMessagesModal({
               linkPreview={lonelyLinkPreview}
               onChange={(messageBody, bodyRanges) => {
                 onChange([{ ...lonelyDraft, messageBody, bodyRanges }]);
+              }}
+              onChangeAttachments={attachments => {
+                onChange([{ ...lonelyDraft, attachments }]);
               }}
               removeLinkPreview={removeLinkPreview}
               theme={theme}
@@ -390,13 +395,14 @@ export function ForwardMessagesModal({
           )}
           <div className="module-ForwardMessageModal__footer">
             <div>
-              {Boolean(selectedContacts.length) && (
-                <Emojify
-                  text={selectedContacts
-                    .map(contact => contact.title)
-                    .join(', ')}
-                />
-              )}
+              {selectedContacts.map((contact, index) => {
+                return (
+                  <Fragment key={contact.id}>
+                    <UserText text={contact.title} />
+                    {index < selectedContacts.length - 1 ? ', ' : ''}
+                  </Fragment>
+                );
+              })}
             </div>
             <div>
               {isEditingMessage || !isLonelyDraftEditable ? (
@@ -434,6 +440,7 @@ type ForwardMessageEditorProps = Readonly<{
     bodyRanges: HydratedBodyRangesType,
     caretLocation?: number
   ) => unknown;
+  onChangeAttachments: (attachments: ReadonlyArray<AttachmentType>) => unknown;
   onSubmit: () => unknown;
   theme: ThemeType;
   i18n: LocalizerType;
@@ -446,13 +453,11 @@ function ForwardMessageEditor({
   RenderCompositionTextArea,
   removeLinkPreview,
   onChange,
+  onChangeAttachments,
   onSubmit,
   theme,
 }: ForwardMessageEditorProps): JSX.Element {
-  const [attachmentsToForward, setAttachmentsToForward] = useState<
-    ReadonlyArray<AttachmentType>
-  >(draft.attachments ?? []);
-
+  const { attachments } = draft;
   return (
     <div className="module-ForwardMessageModal__main-body">
       {linkPreview ? (
@@ -469,15 +474,15 @@ function ForwardMessageEditor({
           />
         </div>
       ) : null}
-      {attachmentsToForward && attachmentsToForward.length ? (
+      {attachments != null && attachments.length > 0 ? (
         <AttachmentList
-          attachments={attachmentsToForward}
+          attachments={attachments}
           i18n={i18n}
           onCloseAttachment={(attachment: AttachmentType) => {
-            const newAttachments = attachmentsToForward.filter(
+            const newAttachments = attachments.filter(
               currentAttachment => currentAttachment !== attachment
             );
-            setAttachmentsToForward(newAttachments);
+            onChangeAttachments(newAttachments);
           }}
         />
       ) : null}

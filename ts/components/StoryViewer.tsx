@@ -55,6 +55,7 @@ import { resolveStorySendStatus } from '../util/resolveStorySendStatus';
 import { strictAssert } from '../util/assert';
 import { MessageBody } from './conversation/MessageBody';
 import { RenderLocation } from './conversation/MessageTextRenderer';
+import { arrow } from '../util/keyboard';
 
 function renderStrong(parts: Array<JSX.Element | string>) {
   return <strong>{parts}</strong>;
@@ -85,7 +86,8 @@ export type PropsType = {
   hasViewReceiptSetting: boolean;
   i18n: LocalizerType;
   isFormattingEnabled: boolean;
-  isFormattingSpoilersEnabled: boolean;
+  isFormattingFlagEnabled: boolean;
+  isFormattingSpoilersFlagEnabled: boolean;
   isInternalUser?: boolean;
   isSignalConversation?: boolean;
   isWindowActive: boolean;
@@ -147,7 +149,8 @@ export function StoryViewer({
   hasViewReceiptSetting,
   i18n,
   isFormattingEnabled,
-  isFormattingSpoilersEnabled,
+  isFormattingFlagEnabled,
+  isFormattingSpoilersFlagEnabled,
   isInternalUser,
   isSignalConversation,
   isWindowActive,
@@ -241,7 +244,9 @@ export function StoryViewer({
 
   // Caption related hooks
   const [hasExpandedCaption, setHasExpandedCaption] = useState<boolean>(false);
-  const [isSpoilerExpanded, setIsSpoilerExpanded] = useState<boolean>(false);
+  const [isSpoilerExpanded, setIsSpoilerExpanded] = useState<
+    Record<number, boolean>
+  >({});
 
   const caption = useMemo(() => {
     if (!attachment?.caption) {
@@ -258,7 +263,7 @@ export function StoryViewer({
   // Reset expansion if messageId changes
   useEffect(() => {
     setHasExpandedCaption(false);
-    setIsSpoilerExpanded(false);
+    setIsSpoilerExpanded({});
   }, [messageId]);
 
   // messageId is set as a dependency so that we can reset the story duration
@@ -342,7 +347,7 @@ export function StoryViewer({
     setConfirmDeleteStory(undefined);
     setHasConfirmHideStory(false);
     setHasExpandedCaption(false);
-    setIsSpoilerExpanded(false);
+    setIsSpoilerExpanded({});
     setIsShowingContextMenu(false);
     setPauseStory(false);
 
@@ -409,7 +414,7 @@ export function StoryViewer({
         return;
       }
 
-      if (canNavigateRight && ev.key === 'ArrowRight') {
+      if (canNavigateRight && ev.key === arrow('end')) {
         viewStory({
           storyId: story.messageId,
           storyViewMode,
@@ -417,7 +422,7 @@ export function StoryViewer({
         });
         ev.preventDefault();
         ev.stopPropagation();
-      } else if (canNavigateLeft && ev.key === 'ArrowLeft') {
+      } else if (canNavigateLeft && ev.key === arrow('start')) {
         viewStory({
           storyId: story.messageId,
           storyViewMode,
@@ -691,7 +696,7 @@ export function StoryViewer({
                   bodyRanges={bodyRanges}
                   i18n={i18n}
                   isSpoilerExpanded={isSpoilerExpanded}
-                  onExpandSpoiler={() => setIsSpoilerExpanded(true)}
+                  onExpandSpoiler={data => setIsSpoilerExpanded(data)}
                   renderLocation={RenderLocation.StoryViewer}
                   text={caption.text}
                 />
@@ -871,27 +876,29 @@ export function StoryViewer({
                 >
                   {isSent || replyCount > 0 ? (
                     <span className="StoryViewer__reply__chevron">
-                      {isSent && !hasViewReceiptSetting && !replyCount && (
-                        <>{i18n('icu:StoryViewer__views-off')}</>
-                      )}
-                      {isSent && hasViewReceiptSetting && (
-                        <Intl
-                          i18n={i18n}
-                          id="icu:MyStories__views--strong"
-                          components={{
-                            views: viewCount,
-                            strong: renderStrong,
-                          }}
-                        />
-                      )}
-                      {(isSent || viewCount > 0) && replyCount > 0 && ' '}
-                      {replyCount > 0 && (
-                        <Intl
-                          i18n={i18n}
-                          id="icu:MyStories__replies"
-                          components={{ replyCount, strong: renderStrong }}
-                        />
-                      )}
+                      <span>
+                        {isSent && !hasViewReceiptSetting && !replyCount && (
+                          <>{i18n('icu:StoryViewer__views-off')}</>
+                        )}
+                        {isSent && hasViewReceiptSetting && (
+                          <Intl
+                            i18n={i18n}
+                            id="icu:MyStories__views--strong"
+                            components={{
+                              views: viewCount,
+                              strong: renderStrong,
+                            }}
+                          />
+                        )}
+                        {(isSent || viewCount > 0) && replyCount > 0 && ' '}
+                        {replyCount > 0 && (
+                          <Intl
+                            i18n={i18n}
+                            id="icu:MyStories__replies"
+                            components={{ replyCount, strong: renderStrong }}
+                          />
+                        )}
+                      </span>
                     </span>
                   ) : null}
                   {!isSent && !replyCount && (
@@ -938,7 +945,8 @@ export function StoryViewer({
             i18n={i18n}
             platform={platform}
             isFormattingEnabled={isFormattingEnabled}
-            isFormattingSpoilersEnabled={isFormattingSpoilersEnabled}
+            isFormattingFlagEnabled={isFormattingFlagEnabled}
+            isFormattingSpoilersFlagEnabled={isFormattingSpoilersFlagEnabled}
             isInternalUser={isInternalUser}
             group={group}
             onClose={() => setCurrentViewTarget(null)}

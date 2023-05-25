@@ -21,6 +21,7 @@ import type { BadgeType } from '../../badges/types';
 import { isSignalConversation } from '../../util/isSignalConversation';
 import { RenderLocation } from '../conversation/MessageTextRenderer';
 
+const EMPTY_OBJECT = Object.freeze(Object.create(null));
 const MESSAGE_STATUS_ICON_CLASS_NAME = `${MESSAGE_TEXT_CLASS_NAME}__status-icon`;
 
 export const MessageStatuses = [
@@ -68,6 +69,7 @@ export type PropsData = Pick<
 };
 
 type PropsHousekeeping = {
+  buttonAriaLabel?: string;
   i18n: LocalizerType;
   onClick: (id: string) => void;
   theme: ThemeType;
@@ -80,6 +82,7 @@ export const ConversationListItem: FunctionComponent<Props> = React.memo(
     acceptedMessageRequest,
     avatarPath,
     badge,
+    buttonAriaLabel,
     color,
     draftPreview,
     groupId,
@@ -147,7 +150,7 @@ export const ConversationListItem: FunctionComponent<Props> = React.memo(
             disableJumbomoji
             disableLinks
             i18n={i18n}
-            isSpoilerExpanded={false}
+            isSpoilerExpanded={{}}
             prefix={draftPreview.prefix}
             renderLocation={RenderLocation.ConversationList}
             text={draftPreview.text}
@@ -168,7 +171,7 @@ export const ConversationListItem: FunctionComponent<Props> = React.memo(
           disableJumbomoji
           disableLinks
           i18n={i18n}
-          isSpoilerExpanded={false}
+          isSpoilerExpanded={EMPTY_OBJECT}
           prefix={lastMessage.prefix}
           renderLocation={RenderLocation.ConversationList}
           text={lastMessage.text}
@@ -193,6 +196,7 @@ export const ConversationListItem: FunctionComponent<Props> = React.memo(
         acceptedMessageRequest={acceptedMessageRequest}
         avatarPath={avatarPath}
         badge={badge}
+        buttonAriaLabel={buttonAriaLabel}
         color={color}
         conversationType={type}
         groupId={groupId}

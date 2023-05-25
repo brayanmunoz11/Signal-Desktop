@@ -24,6 +24,7 @@ import dataInterface from '../sql/Client';
 import * as log from '../logging/log';
 import { getSourceUuid } from '../messages/helpers';
 import { queueUpdateMessage } from '../util/messageBatcher';
+import { getMessageSentTimestamp } from '../util/getMessageSentTimestamp';
 
 const { deleteSentProtoRecipient } = dataInterface;
 
@@ -159,7 +160,7 @@ export class MessageReceipts extends Collection<MessageReceiptModel> {
       return [];
     }
 
-    const sentAt = message.get('sent_at');
+    const sentAt = getMessageSentTimestamp(message.attributes, { log });
     const receipts = this.filter(
       receipt => receipt.get('messageSentAt') === sentAt
     );
@@ -286,10 +287,9 @@ export class MessageReceipts extends Collection<MessageReceiptModel> {
     const type = receipt.get('type');
 
     try {
-      const messages =
-        await window.Signal.Data.getMessagesIncludingEditedBySentAt(
-          messageSentAt
-        );
+      const messages = await window.Signal.Data.getMessagesBySentAt(
+        messageSentAt
+      );
 
       const message = await getTargetMessage(
         sourceConversationId,

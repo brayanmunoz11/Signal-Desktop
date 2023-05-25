@@ -4,24 +4,6 @@
 import type Quill from 'quill';
 import Delta from 'quill-delta';
 
-import { getTextFromOps } from '../util';
-
-const getSelectionHTML = () => {
-  const selection = window.getSelection();
-
-  if (selection == null) {
-    return '';
-  }
-
-  const range = selection.getRangeAt(0);
-  const contents = range.cloneContents();
-  const div = document.createElement('div');
-
-  div.appendChild(contents);
-
-  return div.innerHTML;
-};
-
 const replaceAngleBrackets = (text: string) => {
   const entities: Array<[RegExp, string]> = [
     [/&/g, '&amp;'],
@@ -41,48 +23,20 @@ export class SignalClipboard {
   constructor(quill: Quill) {
     this.quill = quill;
 
-    this.quill.root.addEventListener('copy', e => this.onCaptureCopy(e, false));
-    this.quill.root.addEventListener('cut', e => this.onCaptureCopy(e, true));
     this.quill.root.addEventListener('paste', e => this.onCapturePaste(e));
-  }
 
-  onCaptureCopy(event: ClipboardEvent, isCut = false): void {
-    event.preventDefault();
+    const clipboard = this.quill.getModule('clipboard');
 
-    if (event.clipboardData == null) {
-      return;
-    }
-
-    const range = this.quill.getSelection();
-
-    if (range == null) {
-      return;
-    }
-
-    const contents = this.quill.getContents(range.index, range.length);
-
-    if (contents == null) {
-      return;
-    }
-
-    const { ops } = contents;
-
-    if (!ops || !ops.length) {
-      return;
-    }
-
-    const text = getTextFromOps(ops);
-    const html = getSelectionHTML();
-
-    event.clipboardData.setData('text/plain', text);
-    event.clipboardData.setData('text/signal', html);
-
-    if (isCut) {
-      this.quill.deleteText(range.index, range.length, 'user');
-    }
+    // We keep just the first few matchers (for spacing) then drop the rest!
+    clipboard.matchers = clipboard.matchers
+      .slice(0, 4)
+      .concat(clipboard.matchers.slice(11));
   }
 
   onCapturePaste(event: ClipboardEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+
     if (event.clipboardData == null) {
       return;
     }
@@ -97,7 +51,7 @@ export class SignalClipboard {
     }
 
     const text = event.clipboardData.getData('text/plain');
-    const html = event.clipboardData.getData('text/signal');
+    const html = event.clipboardData.getData('text/html');
 
     const clipboardDelta = html
       ? clipboard.convert(html)
@@ -111,13 +65,12 @@ export class SignalClipboard {
       setTimeout(() => {
         const delta = new Delta()
           .retain(selection.index)
+          .delete(selection.length)
           .concat(clipboardDelta);
         this.quill.updateContents(delta, 'user');
         this.quill.setSelection(delta.length(), 0, 'silent');
         this.quill.scrollingContainer.scrollTop = scrollTop;
       }, 1);
     }
-
-    event.preventDefault();
   }
 }

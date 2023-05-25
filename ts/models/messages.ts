@@ -48,6 +48,7 @@ import type {
 import { SendMessageProtoError } from '../textsecure/Errors';
 import * as expirationTimer from '../util/expirationTimer';
 import { getUserLanguages } from '../util/userLanguages';
+import { getMessageSentTimestamp } from '../util/getMessageSentTimestamp';
 
 import type { ReactionType } from '../types/Reactions';
 import { UUID, UUIDKind } from '../types/UUID';
@@ -55,10 +56,7 @@ import * as reactionUtil from '../reactions/util';
 import * as Stickers from '../types/Stickers';
 import * as Errors from '../types/errors';
 import * as EmbeddedContact from '../types/EmbeddedContact';
-import type {
-  AttachmentType,
-  AttachmentWithHydratedData,
-} from '../types/Attachment';
+import type { AttachmentType } from '../types/Attachment';
 import { isImage, isVideo } from '../types/Attachment';
 import * as Attachment from '../types/Attachment';
 import { stringToMIMEType } from '../types/MIME';
@@ -138,9 +136,11 @@ import {
   conversationQueueJobEnum,
 } from '../jobs/conversationJobQueue';
 import { notificationService } from '../services/notifications';
-import type { LinkPreviewType } from '../types/message/LinkPreviews';
+import type {
+  LinkPreviewType,
+  LinkPreviewWithHydratedData,
+} from '../types/message/LinkPreviews';
 import * as log from '../logging/log';
-import * as Bytes from '../Bytes';
 import { cleanupMessage, deleteMessageData } from '../util/cleanup';
 import {
   getContact,
@@ -162,7 +162,7 @@ import type { ConversationQueueJobData } from '../jobs/conversationJobQueue';
 import { getMessageById } from '../messages/getMessageById';
 import { shouldDownloadStory } from '../util/shouldDownloadStory';
 import { shouldShowStoriesView } from '../state/selectors/stories';
-import type { ContactWithHydratedAvatar } from '../textsecure/SendMessage';
+import type { EmbeddedContactWithHydratedAvatar } from '../types/EmbeddedContact';
 import { SeenStatus } from '../MessageSeenStatus';
 import { isNewReactionReplacingPrevious } from '../reactions/util';
 import { parseBoostBadgeListFromServer } from '../badges/parseBadgesFromServer';
@@ -198,15 +198,6 @@ const { upgradeMessageSchema } = window.Signal.Migrations;
 const { getMessageBySender } = window.Signal.Data;
 
 export class MessageModel extends window.Backbone.Model<MessageAttributesType> {
-  static getLongMessageAttachment: (opts: {
-    attachments: Array<AttachmentWithHydratedData>;
-    body?: string;
-    now: number;
-  }) => {
-    body?: string;
-    attachments: Array<AttachmentWithHydratedData>;
-  };
-
   CURRENT_PROTOCOL_VERSION?: number;
 
   // Set when sending some sync messages, so we get the functionality of
@@ -226,9 +217,9 @@ export class MessageModel extends window.Backbone.Model<MessageAttributesType> {
 
   syncPromise?: Promise<CallbackResultType | void>;
 
-  cachedOutgoingContactData?: Array<ContactWithHydratedAvatar>;
+  cachedOutgoingContactData?: Array<EmbeddedContactWithHydratedAvatar>;
 
-  cachedOutgoingPreviewData?: Array<LinkPreviewType>;
+  cachedOutgoingPreviewData?: Array<LinkPreviewWithHydratedData>;
 
   cachedOutgoingQuoteData?: QuotedMessageType;
 
@@ -1075,14 +1066,25 @@ export class MessageModel extends window.Backbone.Model<MessageAttributesType> {
       const inMemoryMessages = window.MessageController.filterBySentAt(
         Number(sentAt)
       );
-      const matchingMessage = find(inMemoryMessages, message =>
+      let matchingMessage = find(inMemoryMessages, message =>
         isQuoteAMatch(message.attributes, this.get('conversationId'), quote)
       );
+      if (!matchingMessage) {
+        const messages = await window.Signal.Data.getMessagesBySentAt(
+          Number(sentAt)
+        );
+        const found = messages.find(item =>
+          isQuoteAMatch(item, this.get('conversationId'), quote)
+        );
+        if (found) {
+          matchingMessage = window.MessageController.register(found.id, found);
+        }
+      }
+
       if (!matchingMessage) {
         log.info(
           `doubleCheckMissingQuoteReference/${logId}: No match for ${sentAt}.`
         );
-
         return;
       }
 
@@ -1500,6 +1502,8 @@ export class MessageModel extends window.Backbone.Model<MessageAttributesType> {
     // This is used by sendSyncMessage, then set to null
     if ('dataMessage' in result.value && result.value.dataMessage) {
       attributesToUpdate.dataMessage = result.value.dataMessage;
+    } else if ('editMessage' in result.value && result.value.editMessage) {
+      attributesToUpdate.dataMessage = result.value.editMessage;
     }
 
     if (!this.doNotSave) {
@@ -1683,6 +1687,7 @@ export class MessageModel extends window.Backbone.Model<MessageAttributesType> {
     const isTotalSuccess: boolean =
       result.success && !this.get('errors')?.length;
     if (isTotalSuccess) {
+      delete this.cachedOutgoingContactData;
       delete this.cachedOutgoingPreviewData;
       delete this.cachedOutgoingQuoteData;
       delete this.cachedOutgoingStickerData;
@@ -1797,10 +1802,21 @@ export class MessageModel extends window.Backbone.Model<MessageAttributesType> {
         map(conversationsWithSealedSender, c => c.id)
       );
 
+      const isEditedMessage = Boolean(this.get('editHistory'));
+      const timestamp = getMessageSentTimestamp(this.attributes, { log });
+
+      const encodedContent = isEditedMessage
+        ? {
+            encodedEditMessage: dataMessage,
+          }
+        : {
+            encodedDataMessage: dataMessage,
+          };
+
       return handleMessageSend(
         messaging.sendSyncMessage({
-          encodedDataMessage: dataMessage,
-          timestamp: this.get('sent_at'),
+          ...encodedContent,
+          timestamp,
           destination: conv.get('e164'),
           destinationUuid: conv.get('uuid'),
           expirationStartTimestamp:
@@ -1970,8 +1986,7 @@ export class MessageModel extends window.Backbone.Model<MessageAttributesType> {
       queryMessage = matchingMessage;
     } else {
       log.info('copyFromQuotedMessage: db lookup needed', id);
-      const messages =
-        await window.Signal.Data.getMessagesIncludingEditedBySentAt(id);
+      const messages = await window.Signal.Data.getMessagesBySentAt(id);
       const found = messages.find(item =>
         isQuoteAMatch(item, conversationId, result)
       );
@@ -2040,6 +2055,10 @@ export class MessageModel extends window.Backbone.Model<MessageAttributesType> {
 
     // eslint-disable-next-line no-param-reassign
     quote.text = getQuoteBodyText(originalMessage.attributes, quote.id);
+
+    // eslint-disable-next-line no-param-reassign
+    quote.bodyRanges = originalMessage.attributes.bodyRanges;
+
     if (firstAttachment) {
       firstAttachment.thumbnail = null;
     }
@@ -3090,9 +3109,16 @@ export class MessageModel extends window.Backbone.Model<MessageAttributesType> {
     // We want to make sure the message is saved first before applying any edits
     if (!isFirstRun) {
       const edits = Edits.forMessage(message);
+      log.info(
+        `modifyTargetMessage/${this.idForLogging()}: ${
+          edits.length
+        } edits in second run`
+      );
       await Promise.all(
         edits.map(editAttributes =>
-          handleEditMessage(message.attributes, editAttributes)
+          conversation.queueJob('modifyTargetMessage/edits', () =>
+            handleEditMessage(message.attributes, editAttributes)
+          )
         )
       );
     }
@@ -3459,32 +3485,6 @@ export class MessageModel extends window.Backbone.Model<MessageAttributesType> {
 }
 
 window.Whisper.Message = MessageModel;
-
-window.Whisper.Message.getLongMessageAttachment = ({
-  body,
-  attachments,
-  now,
-}) => {
-  if (!body || body.length <= 2048) {
-    return {
-      body,
-      attachments,
-    };
-  }
-
-  const data = Bytes.fromString(body);
-  const attachment = {
-    contentType: MIME.LONG_MESSAGE,
-    fileName: `long-message-${now}.txt`,
-    data,
-    size: data.byteLength,
-  };
-
-  return {
-    body: body.slice(0, 2048),
-    attachments: [attachment, ...attachments],
-  };
-};
 
 window.Whisper.MessageCollection = window.Backbone.Collection.extend({
   model: window.Whisper.Message,

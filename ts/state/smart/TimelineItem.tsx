@@ -118,11 +118,13 @@ export function SmartTimelineItem(props: ExternalProps): JSX.Element {
     messageExpanded,
     openGiftBadge,
     pushPanelForConversation,
+    copyMessageText,
     retryDeleteForEveryone,
     retryMessageSend,
     saveAttachment,
     targetMessage,
     toggleSelectMessage,
+    setMessageToEdit,
     showConversation,
     showExpiredIncomingTapToViewToast,
     showExpiredOutgoingTapToViewToast,
@@ -183,6 +185,7 @@ export function SmartTimelineItem(props: ExternalProps): JSX.Element {
       openGiftBadge={openGiftBadge}
       pushPanelForConversation={pushPanelForConversation}
       reactToMessage={reactToMessage}
+      copyMessageText={copyMessageText}
       retryDeleteForEveryone={retryDeleteForEveryone}
       retryMessageSend={retryMessageSend}
       returnToActiveCall={returnToActiveCall}
@@ -190,6 +193,7 @@ export function SmartTimelineItem(props: ExternalProps): JSX.Element {
       scrollToQuotedMessage={scrollToQuotedMessage}
       targetMessage={targetMessage}
       setQuoteByMessageId={setQuoteByMessageId}
+      setMessageToEdit={setMessageToEdit}
       showContactModal={showContactModal}
       showConversation={showConversation}
       showExpiredIncomingTapToViewToast={showExpiredIncomingTapToViewToast}

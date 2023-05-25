@@ -18,6 +18,7 @@ import type { PreferredBadgeSelectorType } from '../../state/selectors/badges';
 import { matchBlotTextPartitions } from '../util';
 import { handleOutsideClick } from '../../util/handleOutsideClick';
 import { sameWidthModifier } from '../../util/popperUtil';
+import { UserText } from '../../components/UserText';
 
 export type MentionCompletionOptions = {
   getPreferredBadge: PreferredBadgeSelectorType;
@@ -183,16 +184,31 @@ export class MentionCompletion {
     }
   }
 
+  getAttributesForInsert(index: number): Record<string, unknown> {
+    const character = index > 0 ? index - 1 : 0;
+    const contents = this.quill.getContents(character, 1);
+    return contents.ops.reduce(
+      (acc, op) => ({ acc, ...op.attributes }),
+      {} as Record<string, unknown>
+    );
+  }
+
   insertMention(
     mention: ConversationType,
     index: number,
     range: number,
     withTrailingSpace = false
   ): void {
-    const delta = new Delta().retain(index).delete(range).insert({ mention });
+    // The mention + space we add won't be formatted unless we manually provide attributes
+    const attributes = this.getAttributesForInsert(range - 1);
+
+    const delta = new Delta()
+      .retain(index)
+      .delete(range)
+      .insert({ mention }, attributes);
 
     if (withTrailingSpace) {
-      this.quill.updateContents(delta.insert(' '), 'user');
+      this.quill.updateContents(delta.insert(' ', attributes), 'user');
       this.quill.setSelection(index + 2, 0, 'user');
     } else {
       this.quill.updateContents(delta, 'user');
@@ -274,7 +290,7 @@ export class MentionCompletion {
                     unblurredAvatarPath={member.unblurredAvatarPath}
                   />
                   <div className="module-composition-input__suggestions__title">
-                    {member.title}
+                    <UserText text={member.title} />
                   </div>
                 </button>
               ))}
