@@ -5,8 +5,11 @@ import type { Moment } from 'moment';
 import moment from 'moment';
 import type { LocalizerType } from '../types/Util';
 import { DAY, HOUR, MINUTE, MONTH, WEEK } from './durations';
+import { detectDateFormat } from './selectDateFormat';
 
-type RawTimestamp = Readonly<number | Date | Moment>;
+export type RawTimestamp = Readonly<number | Date | Moment>;
+
+const systemType: string = process.platform;
 
 export function isMoreRecentThan(timestamp: number, delta: number): boolean {
   return timestamp > Date.now() - delta;
@@ -126,21 +129,29 @@ export function formatDateTimeLong(
 
   if (isToday(rawTimestamp)) {
     return i18n('icu:timestampFormat__long--today', {
-      time: new Intl.DateTimeFormat(locale, {
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: false,
-      }).format(timestamp),
+      time: detectDateFormat(
+        timestamp,
+        {
+          hour: 'numeric',
+          minute: 'numeric',
+        },
+        systemType,
+        locale
+      ),
     });
   }
 
   if (isYesterday(rawTimestamp)) {
     return i18n('icu:timestampFormat__long--yesterday', {
-      time: new Intl.DateTimeFormat(locale, {
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: false,
-      }).format(timestamp),
+      time: detectDateFormat(
+        timestamp,
+        {
+          hour: 'numeric',
+          minute: 'numeric',
+        },
+        systemType,
+        locale
+      ),
     });
   }
 
