@@ -395,6 +395,13 @@ export function Preferences({
     [onSelectedSpeakerChange, availableSpeakers]
   );
 
+  const [isChecked, setIsChecked] = useState(false);
+  
+  function onTimeFormatChange() {
+    
+    setIsChecked(!isChecked);
+}
+
   let settings: JSX.Element | undefined;
   if (page === Page.General) {
     settings = (
@@ -450,13 +457,13 @@ export function Preferences({
                   onChange={onMinimizeToAndStartInSystemTrayChange}
                 />
               )}
-              {true && (
+                 {true && (
                 <Checkbox
-                  checked={false}
+                  checked={isChecked}
                   label={i18n('icu:changeFormat24h')}
                   moduleClassName="Preferences__checkbox"
-                  name="hideMenuBar"
-                  onChange={onHideMenuBarChange}
+                  name="changeTimeFormat"
+                  onChange={onTimeFormatChange}
                 />
               )}
             </>
