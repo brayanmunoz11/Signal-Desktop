@@ -5,11 +5,8 @@ import type { Moment } from 'moment';
 import moment from 'moment';
 import type { LocalizerType } from '../types/Util';
 import { DAY, HOUR, MINUTE, MONTH, WEEK } from './durations';
-import { detectDateFormat } from './selectDateFormat';
 
-export type RawTimestamp = Readonly<number | Date | Moment>;
-
-const systemType: string = process.platform;
+type RawTimestamp = Readonly<number | Date | Moment>;
 
 export function isMoreRecentThan(timestamp: number, delta: number): boolean {
   return timestamp > Date.now() - delta;
@@ -122,36 +119,29 @@ export function formatDateTimeForAttachment(
 
 export function formatDateTimeLong(
   i18n: LocalizerType,
-  rawTimestamp: RawTimestamp
+  rawTimestamp: RawTimestamp,
+  checkboxState: boolean
 ): string {
   const locale = window.getPreferredSystemLocales();
   const timestamp = rawTimestamp.valueOf();
 
   if (isToday(rawTimestamp)) {
     return i18n('icu:timestampFormat__long--today', {
-      time: detectDateFormat(
-        timestamp,
-        {
-          hour: 'numeric',
-          minute: 'numeric',
-        },
-        systemType,
-        locale
-      ),
+      time: new Intl.DateTimeFormat(locale, {
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: checkboxState,
+      }).format(timestamp),
     });
   }
 
   if (isYesterday(rawTimestamp)) {
     return i18n('icu:timestampFormat__long--yesterday', {
-      time: detectDateFormat(
-        timestamp,
-        {
-          hour: 'numeric',
-          minute: 'numeric',
-        },
-        systemType,
-        locale
-      ),
+      time: new Intl.DateTimeFormat(locale, {
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: checkboxState,
+      }).format(timestamp),
     });
   }
 

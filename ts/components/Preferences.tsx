@@ -10,10 +10,11 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { noop } from 'lodash';
+import { noop, set } from 'lodash';
 import classNames from 'classnames';
 import uuid from 'uuid';
 
+import { useDispatch, useSelector } from 'react-redux';
 import type { MediaDeviceSettings } from '../types/Calling';
 import type {
   NotificationSettingType,
@@ -59,6 +60,8 @@ import { useEscapeHandling } from '../hooks/useEscapeHandling';
 import { useUniqueId } from '../hooks/useUniqueId';
 import { useTheme } from '../hooks/useTheme';
 import { focusableSelectors } from '../util/focusableSelectors';
+
+import type { OptionType } from '../state';
 
 type CheckboxChangeHandlerType = (value: boolean) => unknown;
 type SelectChangeHandlerType<T = string | number> = (value: T) => unknown;
@@ -395,12 +398,17 @@ export function Preferences({
     [onSelectedSpeakerChange, availableSpeakers]
   );
 
-  const [isChecked, setIsChecked] = useState(false);
-  
+  const dispatch = useDispatch();
+  const isChecked = useSelector((state: OptionType) => state.option);
+  // const [isChecked, setIsChecked] = useState(false);
+
   function onTimeFormatChange() {
-    
-    setIsChecked(!isChecked);
-}
+    const newCheckedValue = !isChecked;
+    dispatch({
+      type: 'TOOGLE_OPTION',
+      payload: newCheckedValue,
+    });
+  }
 
   let settings: JSX.Element | undefined;
   if (page === Page.General) {
@@ -457,7 +465,7 @@ export function Preferences({
                   onChange={onMinimizeToAndStartInSystemTrayChange}
                 />
               )}
-                 {true && (
+              {true && (
                 <Checkbox
                   checked={isChecked}
                   label={i18n('icu:changeFormat24h')}

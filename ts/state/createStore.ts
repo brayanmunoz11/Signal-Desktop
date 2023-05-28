@@ -56,6 +56,33 @@ const middlewareList = [
 
 const enhancer = applyMiddleware(...middlewareList);
 
+export type OptionType = {
+  option: boolean;
+};
+
+type ActionType = {
+  type: string;
+  payload: boolean;
+};
+
+const optionInitialState: OptionType = {
+  option: false,
+};
+
+export const optionReducer = (
+  state: OptionType = optionInitialState,
+  action: ActionType
+): OptionType => {
+  switch (action.type) {
+    case 'TOOGLE_OPTION':
+      return { option: action.payload };
+    default:
+      return state;
+  }
+};
+
+export const optionStore = reduxCreateStore(optionReducer);
+
 export const createStore = (
   initialState: Readonly<StateType>
 ): Store<StateType> => reduxCreateStore(reducer, initialState, enhancer);

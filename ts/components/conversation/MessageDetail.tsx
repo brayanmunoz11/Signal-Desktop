@@ -6,6 +6,7 @@ import React, { useEffect, useRef } from 'react';
 import classNames from 'classnames';
 import { noop } from 'lodash';
 
+import { createStore } from 'redux';
 import { Avatar, AvatarSize } from '../Avatar';
 import { ContactName } from './ContactName';
 import { ContextMenu } from '../ContextMenu';
@@ -27,6 +28,12 @@ import { formatDateTimeLong } from '../../util/timestamp';
 import { DurationInSeconds } from '../../util/durations';
 import { format as formatRelativeTime } from '../../util/expirationTimer';
 import { missingCaseError } from '../../util/missingCaseError';
+
+import { optionReducer } from '../../state/createStore';
+
+const store = createStore(optionReducer);
+const optionState = store.getState();
+const optionValue = optionState.option;
 
 export type Contact = Pick<
   ConversationType,
@@ -399,7 +406,7 @@ export function MessageDetail({
               >
                 <>
                   <Time timestamp={sentAt}>
-                    {formatDateTimeLong(i18n, sentAt)}
+                    {formatDateTimeLong(i18n, sentAt, optionValue)}
                   </Time>{' '}
                   <span className="module-message-detail__unix-timestamp">
                     ({sentAt})
