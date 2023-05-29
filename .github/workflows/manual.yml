@@ -12,7 +12,7 @@ on:
 
 jobs:
 
-  linux:
+  tst:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -39,6 +39,7 @@ jobs:
         NPM_CONFIG_LOGLEVEL: verbose
 
     - run: yarn generate
+    - run: yarn add
     - name: Run test
       run: yarn test
 
