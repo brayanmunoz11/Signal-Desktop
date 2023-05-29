@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import type { ReactChild, ReactNode } from 'react';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import classNames from 'classnames';
-import { noop } from 'lodash';
+import { noop, set } from 'lodash';
 
-import { createStore } from 'redux';
+// import { createStore } from 'redux';
 import { Avatar, AvatarSize } from '../Avatar';
 import { ContactName } from './ContactName';
 import { ContextMenu } from '../ContextMenu';
@@ -29,11 +29,13 @@ import { DurationInSeconds } from '../../util/durations';
 import { format as formatRelativeTime } from '../../util/expirationTimer';
 import { missingCaseError } from '../../util/missingCaseError';
 
-import { optionReducer } from '../../state/createStore';
+// import { optionReducer, optionStore } from '../../state/createStore';
 
-const store = createStore(optionReducer);
-const optionState = store.getState();
-const optionValue = optionState.option;
+// const store = createStore(optionReducer);
+// const optionState = optionStore.getState();
+// const optionValue = optionState.option;
+
+// import useChangeFormat from '../../util/useChangeFormat';
 
 export type Contact = Pick<
   ConversationType,
@@ -237,7 +239,7 @@ export function MessageDetail({
             className="module-message-detail__status-timestamp"
             timestamp={contact.statusTimestamp}
           >
-            {formatDateTimeLong(i18n, contact.statusTimestamp)}
+            {formatDateTimeLong(i18n, contact.statusTimestamp, option)}
           </Time>
         )}
       </div>
@@ -325,6 +327,18 @@ export function MessageDetail({
     ? DurationInSeconds.fromMillis(message.expirationTimestamp - Date.now())
     : undefined;
 
+  const [option, setOption] = useState<boolean>(false);
+
+  const changeDateFormat = (): void => {
+    setOption(!option);
+  };
+
+  useEffect(() => {
+    setOption(false);
+  }, []);
+
+  const locale = window.getPreferredSystemLocales();
+
   return (
     // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
     <div className="module-message-detail" tabIndex={0} ref={focusRef}>
@@ -406,11 +420,19 @@ export function MessageDetail({
               >
                 <>
                   <Time timestamp={sentAt}>
-                    {formatDateTimeLong(i18n, sentAt, optionValue)}
+                    {formatDateTimeLong(i18n, sentAt, option)}
                   </Time>{' '}
                   <span className="module-message-detail__unix-timestamp">
                     ({sentAt})
                   </span>
+                  <button
+                    style={{ marginLeft: '1rem' }}
+                    type="button"
+                    onClick={changeDateFormat}
+                  >
+                    {/* {option ? '12h' : '24h'} */}
+                    {locale.toString()}
+                  </button>
                 </>
               </ContextMenu>
             </td>
@@ -422,7 +444,7 @@ export function MessageDetail({
               </td>
               <td>
                 <Time timestamp={receivedAt}>
-                  {formatDateTimeLong(i18n, receivedAt)}
+                  {formatDateTimeLong(i18n, receivedAt, option)}
                 </Time>{' '}
                 <span className="module-message-detail__unix-timestamp">
                   ({receivedAt})

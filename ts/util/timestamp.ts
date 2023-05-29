@@ -5,6 +5,7 @@ import type { Moment } from 'moment';
 import moment from 'moment';
 import type { LocalizerType } from '../types/Util';
 import { DAY, HOUR, MINUTE, MONTH, WEEK } from './durations';
+import { formatTimeUnix } from './useChangeFormat';
 
 type RawTimestamp = Readonly<number | Date | Moment>;
 
@@ -120,28 +121,51 @@ export function formatDateTimeForAttachment(
 export function formatDateTimeLong(
   i18n: LocalizerType,
   rawTimestamp: RawTimestamp,
-  checkboxState: boolean
+  is24HourTime: boolean
 ): string {
   const locale = window.getPreferredSystemLocales();
   const timestamp = rawTimestamp.valueOf();
 
+  // if (isToday(rawTimestamp)) {
+  //   return i18n('icu:timestampFormat__long--today', {
+  //     time: new Intl.DateTimeFormat(locale, {
+  //       hour: 'numeric',
+  //       minute: 'numeric',
+  //       hour12: is24HourTime,
+  //     }).format(timestamp),
+  //   });
+  // }
+
+  formatTimeUnix;
+
+  // if (isToday(rawTimestamp)) {
+  //   return i18n('icu:timestampFormat__long--today', {
+  //     time: new Intl.DateTimeFormat(locale, {
+  //       hour: 'numeric',
+  //       minute: 'numeric',
+  //       hour12: is24HourTime,
+  //     }).format(timestamp),
+  //   });
+  // }
+
+  // if (isYesterday(rawTimestamp)) {
+  //   return i18n('icu:timestampFormat__long--yesterday', {
+  //     time: new Intl.DateTimeFormat(locale, {
+  //       hour: 'numeric',
+  //       minute: 'numeric',
+  //       hour12: is24HourTime,
+  //     }).format(timestamp),
+  //   });
+  // }
   if (isToday(rawTimestamp)) {
     return i18n('icu:timestampFormat__long--today', {
-      time: new Intl.DateTimeFormat(locale, {
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: checkboxState,
-      }).format(timestamp),
+      time: formatTimeUnix(timestamp, locale),
     });
   }
 
   if (isYesterday(rawTimestamp)) {
     return i18n('icu:timestampFormat__long--yesterday', {
-      time: new Intl.DateTimeFormat(locale, {
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: checkboxState,
-      }).format(timestamp),
+      time: formatTimeUnix(timestamp, locale),
     });
   }
 

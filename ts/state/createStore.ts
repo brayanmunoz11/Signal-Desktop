@@ -81,7 +81,10 @@ export const optionReducer = (
   }
 };
 
-export const optionStore = reduxCreateStore(optionReducer);
+export const optionStore = reduxCreateStore(
+  optionReducer,
+  applyMiddleware(logger)
+);
 
 export const createStore = (
   initialState: Readonly<StateType>

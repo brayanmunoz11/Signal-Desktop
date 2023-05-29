@@ -61,7 +61,7 @@ import { useUniqueId } from '../hooks/useUniqueId';
 import { useTheme } from '../hooks/useTheme';
 import { focusableSelectors } from '../util/focusableSelectors';
 
-import type { OptionType } from '../state';
+// import type { OptionType } from '../state/createStore';
 
 type CheckboxChangeHandlerType = (value: boolean) => unknown;
 type SelectChangeHandlerType<T = string | number> = (value: T) => unknown;
@@ -398,17 +398,22 @@ export function Preferences({
     [onSelectedSpeakerChange, availableSpeakers]
   );
 
-  const dispatch = useDispatch();
-  const isChecked = useSelector((state: OptionType) => state.option);
+  // const dispatch = useDispatch();
+  // const isChecked = useSelector((state: OptionType) => state.option);
+
   // const [isChecked, setIsChecked] = useState(false);
 
-  function onTimeFormatChange() {
-    const newCheckedValue = !isChecked;
-    dispatch({
-      type: 'TOOGLE_OPTION',
-      payload: newCheckedValue,
-    });
-  }
+  // // function onTimeFormatChange() {
+  // //   const newCheckedValue = !isChecked;
+  // //   dispatch({
+  // //     type: 'TOOGLE_OPTION',
+  // //     payload: newCheckedValue,
+  // //   });
+  // // }
+
+  // function onTimeFormatChange() {
+  //   setIsChecked(!isChecked);
+  // }
 
   let settings: JSX.Element | undefined;
   if (page === Page.General) {
@@ -465,7 +470,7 @@ export function Preferences({
                   onChange={onMinimizeToAndStartInSystemTrayChange}
                 />
               )}
-              {true && (
+              {/* {true && (
                 <Checkbox
                   checked={isChecked}
                   label={i18n('icu:changeFormat24h')}
@@ -473,7 +478,7 @@ export function Preferences({
                   name="changeTimeFormat"
                   onChange={onTimeFormatChange}
                 />
-              )}
+              )} */}
             </>
           )}
         </SettingsRow>

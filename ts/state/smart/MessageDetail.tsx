@@ -23,6 +23,7 @@ import { useLightboxActions } from '../ducks/lightbox';
 import { useStoriesActions } from '../ducks/stories';
 
 export { Contact } from '../../components/conversation/MessageDetail';
+
 export type OwnProps = Pick<
   MessageDetailProps,
   'contacts' | 'errors' | 'message' | 'receivedAt'
