@@ -13,9 +13,15 @@ export function formatTimeUnix(
   timestamp: number,
   locale: Array<string>
 ): string {
-  const date = new Date(timestamp * 1000);
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
+  const date = new Date(timestamp);
+
+  // Obtener la fecha y hora localizada
+  const localizedDateTime = date.toLocaleString(locale);
+
+  // Extraer las horas y los minutos de la fecha y hora localizada
+  const match = localizedDateTime.match(/(\d{1,2}):(\d{2}):(\d{2})/);
+  const hours = parseInt(match[1]);
+  const minutes = parseInt(match[2]);
 
   // Convertir la hora a formato de 24 horas
   const formattedHours = hours.toString().padStart(2, '0');
@@ -30,7 +36,7 @@ export function formatTimeUnix(
   ) {
     formattedTime = `${formattedHours}:${formattedMinutes}`;
   } else {
-    formattedTime = `${formattedHours}h${formattedMinutes}`;
+    formattedTime = `${formattedHours}:${formattedMinutes}`;
   }
 
   return formattedTime;
