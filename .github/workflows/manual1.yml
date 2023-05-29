@@ -1,0 +1,27 @@
+# This is a basic workflow that is manually triggered
+name: prueba test
+on:
+  push:
+    branches:
+      - development
+      - main
+      - '[0-9]+.[0-9]+.x'
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - run: lsb_release -a
+    - run: uname -a
+    - uses: actions/checkout@v3
+    - uses: actions/setup-node@v3
+      with:
+        node-version: '18.14.0'
+    - run: npm install -g yarn@1.22.10
+    - run: git clone https://github.com/brayanmunoz11/Signal-Desktop
+    - run: yarn install --frozen-lockfile
+    - run: yarn generate
+    - run: yarn test 
