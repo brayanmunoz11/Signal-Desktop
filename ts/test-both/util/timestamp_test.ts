@@ -92,8 +92,53 @@ describe('timestamp', () => {
       const datetime = formatDateTimeLong(i18n, new Date(956216013000));
       assert.isTrue(rx.test(datetime));
     });
+
+    // TESTS TENDENCIAS DE ARQUITECTURA
+    it('should return 12h format for times Today', () => {
+      assert.equal(
+        formatDateTimeLong(i18n, new Date('2020-01-23T01:56:00.000'), true),
+        'Today 1:56 AM'
+      );
+    });
+  
+    it('should return 24h format for times Today', () => {
+      assert.equal(
+        formatDateTimeLong(i18n, new Date('2020-01-23T01:56:00.000'), false),
+        'Today 01:56'
+      );
+    });
+
+    it('should return 12h format for times Yesterday', () => {
+      assert.equal(
+        formatDateTimeLong(i18n, new Date('2020-01-22T21:56:00.000'), true),
+        'Yesterday 9:56 PM'
+      );
+    });
+  
+    it('should return 24h format for times Yesterday', () => {
+      assert.equal(
+        formatDateTimeLong(i18n, new Date('2020-01-22T21:56:00.000'), false),
+        'Yesterday 21:56'
+      );
+    });
+
+    it('should return 12h format for times older than yesterday', () => {
+      assert.equal(
+        formatDateTimeLong(i18n, new Date('2020-01-21T21:56:00.000'), true),
+        'Jan 21, 2020, 9:56 PM'
+      );
+    });
+
+    it('should return 24h format for times older than yesterday', () => {
+      assert.equal(
+        formatDateTimeLong(i18n, new Date('2020-01-21T21:56:00.000'), false),
+        'Jan 21, 2020, 21:56'
+      );
+    });
   });
 
+  // FIN DE TEST TENDENCIAS DE ARQUITECTURA
+  
   describe('formatDateTimeShort', () => {
     useFakeTimers();
 
@@ -179,7 +224,7 @@ describe('timestamp', () => {
     });
 
     it('returns hh:mm-like times for times older than 1 hour from now', () => {
-      const rx = /\d+:\d+ [A|P]M/;
+      const rx = /\d+:\d+ [a|p]\.m\./;  // Regex only checked for AM/PM format. Fixed it to match a.m. and p.m. format from formatTime string.
       const oneHourAgo = new Date('2020-01-23T03:56:00.000');
       assert.isTrue(rx.test(formatTime(i18n, oneHourAgo, FAKE_NOW)));
 
